@@ -59,7 +59,22 @@ function useProgress(onDone: () => void, fast: boolean) {
 
 export default function Loader({ onDone }: { onDone: () => void }) {
   const reduce = !!useReducedMotion();
-  const p = useProgress(onDone, reduce);
+  // full intro once per session; returning views get a short, quiet transition
+  const [seen] = useState(() => {
+    try {
+      return sessionStorage.getItem("petalia-intro") === "1";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("petalia-intro", "1");
+    } catch {
+      /* storage unavailable */
+    }
+  }, []);
+  const p = useProgress(onDone, reduce || seen);
   const pct = Math.round(p * 100);
   const phrase = PHRASES[Math.min(PHRASES.length - 1, Math.floor(p * PHRASES.length))];
 

@@ -108,31 +108,14 @@ function Composition({ still, ready }: { still: boolean; ready: boolean }) {
     camera.lookAt(0, 0, -2);
   });
 
-  const x0 = narrow ? 0 : -viewport.width * 0.2;
+  // calm composition: a single hero photograph, kept clear of the copy
+  const x0 = narrow ? 0 : -viewport.width * 0.23;
+  const float = { speed: still ? 0 : 0.7, rotationIntensity: 0.03, floatIntensity: 0.15 };
   return (
     <group ref={group}>
-      {/* hero shot: real red roses, photographed on black, melted into the night */}
-      <Float speed={still ? 0 : 0.8} rotationIntensity={0.04} floatIntensity={0.18}>
-        <PhotoPanel ready={ready} src={IMG.redVase} width={narrow ? 3.4 : 3.9} height={narrow ? 5.1 : 5.85} position={[x0, narrow ? 1.1 : -0.15, 0]} fade={0.45} bend={0} delay={0.25} />
+      <Float {...float}>
+        <PhotoPanel ready={ready} src={IMG.redVase} width={narrow ? 3.2 : 3.9} height={narrow ? 4.8 : 5.85} position={[x0, narrow ? 1.05 : -0.1, 0]} fade={0.45} bend={0} delay={0.25} />
       </Float>
-      {/* floating gallery of real arrangements at different depths */}
-      <Float speed={still ? 0 : 0.8} rotationIntensity={0.04} floatIntensity={0.18}>
-        <PhotoPanel ready={ready} src={IMG.redEditorial} width={1.9} height={1.9} position={[x0 - 3.1, 1.9, -2.6]} rotation={[0, 0.35, 0.03]} fade={0.06} delay={0.45} />
-      </Float>
-      <Float speed={still ? 0 : 0.8} rotationIntensity={0.04} floatIntensity={0.18}>
-        <PhotoPanel ready={ready} src={IMG.peonyTall} width={1.6} height={2.8} position={[x0 + 2.4, -1.9, -3.4]} rotation={[0, -0.3, -0.04]} fade={0.06} opacity={0.85} delay={0.6} />
-      </Float>
-      <Float speed={still ? 0 : 0.8} rotationIntensity={0.04} floatIntensity={0.18}>
-        <PhotoPanel ready={ready} src={IMG.redBouquet} width={1.7} height={2.1} position={[x0 - 3.4, -2.2, -1.8]} rotation={[0, 0.45, -0.05]} fade={0.06} delay={0.75} />
-      </Float>
-      <Float speed={still ? 0 : 0.8} rotationIntensity={0.04} floatIntensity={0.18}>
-        <PhotoPanel ready={ready} src={IMG.roseBox} width={2.2} height={2.2} position={[x0 + 1.9, 2.6, -6]} rotation={[0, -0.2, 0.02]} fade={0.06} opacity={0.6} delay={0.9} />
-      </Float>
-      {!narrow && (
-        <Float speed={still ? 0 : 0.8} rotationIntensity={0.04} floatIntensity={0.18}>
-          <PhotoPanel ready={ready} src={IMG.white} width={2.4} height={2.4} position={[viewport.width * 0.32, -2.4, -8]} rotation={[0, -0.35, 0]} fade={0.08} opacity={0.35} delay={1.05} />
-        </Float>
-      )}
     </group>
   );
 }
@@ -143,7 +126,7 @@ export default function HeroScene({ still = false, ready = true }: { still?: boo
     <>
       <color attach="background" args={["#12070b"]} />
       <Composition still={still} ready={ready} />
-      <Sparkles count={80} scale={[12, 7, 6]} size={2.4} speed={still ? 0 : 0.8} color="#f2c47e" opacity={0.7} />
+      <Sparkles count={30} scale={[12, 7, 6]} size={1.8} speed={still ? 0 : 0.12} color="#f2c47e" opacity={0.45} />
     </>
   );
 }

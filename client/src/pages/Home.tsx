@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
-import { ArrowLeft, ArrowUpLeft, Check, Flower2, Heart, Menu, MousePointer2, Plus, Sparkles, X, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUpLeft, Check, Flower2, Gift, HandHeart, Heart, Menu, MessageCircle, Plus, Sparkles, X } from "lucide-react";
 import { categories, colorOptions, previewImage, flowerOptions, gallery, IMG, occasions, productFilters, products, sizeOptions, waLink, wrapOptions, type Category, type FlowerKind, type Product } from "@/petalia/data";
 import Loader from "@/petalia/Loader";
 import { Marquee, Reveal, ScrollProgress, ScrollWords, scrollLock, useSmoothScroll } from "@/petalia/ui";
@@ -491,7 +491,7 @@ export default function Home() {
         <div className="nav-end">
             <a className="nav-cta" href={waLink("مرحبًا بيتـاليا، أود الاستفسار عن تنسيقاتكم.")} target="_blank" rel="noreferrer">
               <span>لنتحدث عن الورد</span>
-              <ArrowUpLeft size={16} />
+              <MessageCircle size={17} strokeWidth={1.6} />
             </a>
           <button className="burger" aria-label={menu ? "إغلاق القائمة" : "فتح القائمة"} aria-expanded={menu} onClick={() => setMenu(m => !m)}>
             {menu ? <X size={20} /> : <Menu size={20} />}
@@ -550,41 +550,35 @@ export default function Home() {
                   <Sparkles size={16} /> صمّم باقتك الخاصة
                 </a>
             </motion.div>
-            <motion.div className="hero-stats" initial={{ opacity: 0 }} animate={ready ? { opacity: 1 } : undefined} transition={{ delay: 1.3, duration: 1 }}>
-              <div>
-                <strong>100%</strong>
-                <span>زهور طبيعية طازجة</span>
-              </div>
-              <div>
-                <strong>يدوي</strong>
-                <span>كل تنسيق بلمسة فنان</span>
-              </div>
-              <div>
-                <strong>نفس اليوم</strong>
-                <span>توصيل داخل الرياض*</span>
-              </div>
-            </motion.div>
           </motion.div>
-          <div className="hero-side">
-            <span>PETALIA FLORAL STUDIO</span>
-            <span>EST. WITH LOVE</span>
-          </div>
-          <div className="hero-hint">
-            <MousePointer2 size={14} /> حرّكوا المؤشر لاستكشاف المشهد
-          </div>
           <a className="hero-scroll" href="#collections" aria-label="انتقل إلى المجموعات">
-            <span>مرّر</span>
             <i />
           </a>
         </section>
 
-        <Marquee className="marquee-main" items={[<em key="a">Flowers, thoughtfully told</em>, "كل زهرة تحكي حكاية", <em key="b">Made with feeling</em>, "تنسيق يدوي من القلب", <em key="c">Since the first petal</em>, "هدايا تبقى في الذاكرة"]} />
+        {/* ---------------- PROMISES ---------------- */}
+        <section className="promises" aria-label="ما نقدّمه">
+          {[
+            { icon: <Flower2 size={22} strokeWidth={1.3} />, t: "زهور طبيعية مختارة", d: "ننتقي كل زهرة بعناية" },
+            { icon: <HandHeart size={22} strokeWidth={1.3} />, t: "تنسيق يدوي", d: "لمسة فنية في كل باقة" },
+            { icon: <Gift size={22} strokeWidth={1.3} />, t: "تغليف وبطاقة إهداء", d: "تفاصيل تكمل هديتكم" },
+            { icon: <MessageCircle size={22} strokeWidth={1.3} />, t: "طلب سهل عبر واتساب", d: "نرد عليكم ونرتّب كل شيء" },
+          ].map((p, i) => (
+            <motion.div key={p.t} className="promise" initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, ease: EASE, delay: i * 0.08 }}>
+              <span className="promise-icon">{p.icon}</span>
+              <div>
+                <strong>{p.t}</strong>
+                <small>{p.d}</small>
+              </div>
+            </motion.div>
+          ))}
+        </section>
 
         {/* ---------------- COLLECTIONS ---------------- */}
         <section id="collections" className="collections pad">
           <div className="coll-intro">
             <SectionHead kicker="مجموعاتنا / 01" title={<>اختيرت بحب...<br /><em>وصُممت لتُهدى</em></>} en="A collection made to be remembered" />
-            <p>لكل لحظة لونها، ولكل شعور زهرة تشبهه. اكتشفوا مجموعاتنا المختارة بعناية — وحرّكوا المؤشر فوق البطاقات.</p>
+            <p>لكل لحظة لونها، ولكل شعور زهرة تشبهه. اكتشفوا مجموعاتنا المختارة بعناية.</p>
             <a href="#products" className="link">
               تصفّح كل الباقات <ArrowLeft size={16} />
             </a>
