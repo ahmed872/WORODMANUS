@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRe
 import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { ArrowLeft, ArrowUpLeft, Check, Flower2, Heart, Menu, MousePointer2, Plus, RotateCw, Sparkles, X } from "lucide-react";
 import { categories, colorOptions, previewImage, flowerOptions, gallery, IMG, occasions, productFilters, products, sizeOptions, waLink, wrapOptions, type Category, type FlowerKind, type Product } from "@/petalia/data";
+import Loader from "@/petalia/Loader";
 import { Cursor, Magnetic, Marquee, Reveal, RingGallery, ScrollProgress, ScrollWords, scrollLock, Tilt, useSmoothScroll } from "@/petalia/ui";
 
 const HeroCanvas = lazy(() => import("@/petalia/three/HeroCanvas"));
@@ -41,44 +42,6 @@ function useEscape(active: boolean, close: () => void) {
 }
 
 /* ------------------------------------------------------------------ */
-function Loader({ onDone }: { onDone: () => void }) {
-  const [n, setN] = useState(0);
-  useEffect(() => {
-    const start = performance.now();
-    let raf = 0;
-    const tick = (t: number) => {
-      const k = Math.min(1, (t - start) / 1500);
-      setN(Math.round((1 - Math.pow(1 - k, 2)) * 100));
-      if (k < 1) raf = requestAnimationFrame(tick);
-      else setTimeout(onDone, 220);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [onDone]);
-  return (
-    <motion.div className="loader" exit={{ clipPath: "inset(0 0 100% 0)" }} transition={{ duration: 1, ease: EASE }}>
-      <svg className="loader-bloom" viewBox="-60 -60 120 120" aria-hidden>
-        {Array.from({ length: 10 }, (_, i) => (
-          <path key={i} d="M0 0 C 18 -14, 20 -42, 0 -52 C -20 -42, -18 -14, 0 0Z" style={{ ["--r" as string]: `${i * 36 + (i % 2) * 18}deg`, ["--d" as string]: `${i * 0.08}s`, ["--s" as string]: i % 2 ? 0.72 : 1 }} />
-        ))}
-        <circle r="6" />
-      </svg>
-      <div className="loader-word" aria-label="PETALIA">
-        {"PETALIA".split("").map((c, i) => (
-          <motion.span key={i} initial={{ y: "100%", opacity: 0 }} animate={{ y: "0%", opacity: 1 }} transition={{ delay: 0.25 + i * 0.06, duration: 0.8, ease: EASE }}>
-            {c}
-          </motion.span>
-        ))}
-      </div>
-      <p>نُحضّر لك تجربة مليئة بالجمال...</p>
-      <div className="loader-count">
-        <span>{String(n).padStart(3, "0")}</span>
-        <i style={{ transform: `scaleX(${n / 100})` }} />
-      </div>
-    </motion.div>
-  );
-}
-
 /* ------------------------------------------------------------------ */
 function SectionHead({ kicker, title, en, light }: { kicker: string; title: React.ReactNode; en?: string; light?: boolean }) {
   return (
@@ -386,7 +349,8 @@ export default function Home() {
   const closeLightbox = useCallback(() => setLightbox(null), []);
   const closeMenu = useCallback(() => setMenu(false), []);
   useEscape(menu, closeMenu);
-  useSmoothScroll(!reduce);
+  useSmoothScroll(!reduce && !loading);
+  const ready = !loading;
 
   useEffect(() => {
     let last = 0;
@@ -476,29 +440,29 @@ export default function Home() {
         {/* ---------------- HERO ---------------- */}
         <section id="home" className="hero" ref={hero} data-dark>
           <Suspense fallback={<div className="hero-canvas hero-canvas-fallback" />}>
-            <HeroCanvas still={reduce} />
+            <HeroCanvas still={reduce} ready={ready} />
           </Suspense>
           <div className="hero-vignette" />
           <motion.div className="hero-copy" style={{ y: heroCopyY, opacity: heroCopyO }}>
-            <motion.span className="kicker light" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.9, duration: 0.8 }}>
+            <motion.span className="kicker light" initial={{ opacity: 0, y: 10 }} animate={ready ? { opacity: 1, y: 0 } : undefined} transition={{ delay: 0.55, duration: 0.8 }}>
               <i /> استوديو زهور فاخر · الرياض
             </motion.span>
             <h1>
               <span className="line">
-                <motion.span initial={{ y: "110%" }} animate={{ y: 0 }} transition={{ delay: 1.95, duration: 1.2, ease: EASE }}>
+                <motion.span initial={{ y: "110%" }} animate={ready ? { y: 0 } : undefined} transition={{ delay: 0.6, duration: 1.2, ease: EASE }}>
                   بعض المشاعر...
                 </motion.span>
               </span>
               <span className="line">
-                <motion.em initial={{ y: "110%" }} animate={{ y: 0 }} transition={{ delay: 2.08, duration: 1.2, ease: EASE }}>
+                <motion.em initial={{ y: "110%" }} animate={ready ? { y: 0 } : undefined} transition={{ delay: 0.72, duration: 1.2, ease: EASE }}>
                   لا تُقال بالكلمات
                 </motion.em>
               </span>
             </h1>
-            <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2.3, duration: 0.9 }}>
+            <motion.p initial={{ opacity: 0, y: 16 }} animate={ready ? { opacity: 1, y: 0 } : undefined} transition={{ delay: 0.95, duration: 0.9 }}>
               نختار أجمل الزهور وننسّقها بعناية، لتصل مشاعركم بأجمل صورة.
             </motion.p>
-            <motion.div className="hero-actions" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2.45, duration: 0.9 }}>
+            <motion.div className="hero-actions" initial={{ opacity: 0, y: 16 }} animate={ready ? { opacity: 1, y: 0 } : undefined} transition={{ delay: 1.1, duration: 0.9 }}>
               <Magnetic>
                 <a className="btn btn-light" href="#products">
                   اكتشف مجموعتنا <ArrowLeft size={17} />
@@ -510,7 +474,7 @@ export default function Home() {
                 </a>
               </Magnetic>
             </motion.div>
-            <motion.div className="hero-stats" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.7, duration: 1 }}>
+            <motion.div className="hero-stats" initial={{ opacity: 0 }} animate={ready ? { opacity: 1 } : undefined} transition={{ delay: 1.3, duration: 1 }}>
               <div>
                 <strong>100%</strong>
                 <span>زهور طبيعية طازجة</span>

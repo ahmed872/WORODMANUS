@@ -54,7 +54,7 @@ const frag = /* glsl */ `
   }
 `;
 
-function PhotoPanel({ src, width, height, position, rotation = [0, 0, 0], fade = 0.04, bend = 0.03, opacity = 1, delay = 0 }: { src: string; width: number; height: number; position: [number, number, number]; rotation?: [number, number, number]; fade?: number; bend?: number; opacity?: number; delay?: number }) {
+function PhotoPanel({ ready, src, width, height, position, rotation = [0, 0, 0], fade = 0.04, bend = 0.03, opacity = 1, delay = 0 }: { ready: boolean; src: string; width: number; height: number; position: [number, number, number]; rotation?: [number, number, number]; fade?: number; bend?: number; opacity?: number; delay?: number }) {
   const tex = useTexture(src);
   const mat = useRef<THREE.ShaderMaterial>(null);
   const born = useRef<number | null>(null);
@@ -75,6 +75,7 @@ function PhotoPanel({ src, width, height, position, rotation = [0, 0, 0], fade =
 
   useFrame(({ clock }) => {
     if (!mat.current) return;
+    if (!ready) return;
     if (born.current === null) born.current = clock.elapsedTime;
     const k = THREE.MathUtils.clamp((clock.elapsedTime - born.current - delay) / 1.6, 0, 1);
     // curtain-style reveal from the top, eased
@@ -89,7 +90,7 @@ function PhotoPanel({ src, width, height, position, rotation = [0, 0, 0], fade =
   );
 }
 
-function Composition({ still }: { still: boolean }) {
+function Composition({ still, ready }: { still: boolean; ready: boolean }) {
   const { viewport, camera } = useThree();
   const group = useRef<THREE.Group>(null);
   const narrow = viewport.aspect < 0.95;
@@ -112,36 +113,36 @@ function Composition({ still }: { still: boolean }) {
     <group ref={group}>
       {/* hero shot: real red roses, photographed on black, melted into the night */}
       <Float speed={still ? 0 : 1.1} rotationIntensity={0.08} floatIntensity={0.35}>
-        <PhotoPanel src={IMG.redVase} width={narrow ? 3.4 : 3.9} height={narrow ? 5.1 : 5.85} position={[x0, narrow ? 1.1 : -0.15, 0]} fade={0.45} bend={0} delay={1.1} />
+        <PhotoPanel ready={ready} src={IMG.redVase} width={narrow ? 3.4 : 3.9} height={narrow ? 5.1 : 5.85} position={[x0, narrow ? 1.1 : -0.15, 0]} fade={0.45} bend={0} delay={0.25} />
       </Float>
       {/* floating gallery of real arrangements at different depths */}
       <Float speed={still ? 0 : 1.6} rotationIntensity={0.2} floatIntensity={0.6}>
-        <PhotoPanel src={IMG.redEditorial} width={1.9} height={1.9} position={[x0 - 3.1, 1.9, -2.6]} rotation={[0, 0.35, 0.03]} fade={0.06} delay={1.5} />
+        <PhotoPanel ready={ready} src={IMG.redEditorial} width={1.9} height={1.9} position={[x0 - 3.1, 1.9, -2.6]} rotation={[0, 0.35, 0.03]} fade={0.06} delay={0.45} />
       </Float>
       <Float speed={still ? 0 : 1.3} rotationIntensity={0.2} floatIntensity={0.5}>
-        <PhotoPanel src={IMG.peonyTall} width={1.6} height={2.8} position={[x0 + 2.4, -1.9, -3.4]} rotation={[0, -0.3, -0.04]} fade={0.06} opacity={0.85} delay={1.7} />
+        <PhotoPanel ready={ready} src={IMG.peonyTall} width={1.6} height={2.8} position={[x0 + 2.4, -1.9, -3.4]} rotation={[0, -0.3, -0.04]} fade={0.06} opacity={0.85} delay={0.6} />
       </Float>
       <Float speed={still ? 0 : 1.5} rotationIntensity={0.2} floatIntensity={0.6}>
-        <PhotoPanel src={IMG.redBouquet} width={1.7} height={2.1} position={[x0 - 3.4, -2.2, -1.8]} rotation={[0, 0.45, -0.05]} fade={0.06} delay={1.9} />
+        <PhotoPanel ready={ready} src={IMG.redBouquet} width={1.7} height={2.1} position={[x0 - 3.4, -2.2, -1.8]} rotation={[0, 0.45, -0.05]} fade={0.06} delay={0.75} />
       </Float>
       <Float speed={still ? 0 : 1.2} rotationIntensity={0.15} floatIntensity={0.4}>
-        <PhotoPanel src={IMG.roseBox} width={2.2} height={2.2} position={[x0 + 1.9, 2.6, -6]} rotation={[0, -0.2, 0.02]} fade={0.06} opacity={0.6} delay={2.1} />
+        <PhotoPanel ready={ready} src={IMG.roseBox} width={2.2} height={2.2} position={[x0 + 1.9, 2.6, -6]} rotation={[0, -0.2, 0.02]} fade={0.06} opacity={0.6} delay={0.9} />
       </Float>
       {!narrow && (
         <Float speed={still ? 0 : 1} rotationIntensity={0.15} floatIntensity={0.4}>
-          <PhotoPanel src={IMG.white} width={2.4} height={2.4} position={[viewport.width * 0.32, -2.4, -8]} rotation={[0, -0.35, 0]} fade={0.08} opacity={0.35} delay={2.3} />
+          <PhotoPanel ready={ready} src={IMG.white} width={2.4} height={2.4} position={[viewport.width * 0.32, -2.4, -8]} rotation={[0, -0.35, 0]} fade={0.08} opacity={0.35} delay={1.05} />
         </Float>
       )}
     </group>
   );
 }
 
-export default function HeroScene({ still = false }: { still?: boolean }) {
+export default function HeroScene({ still = false, ready = true }: { still?: boolean; ready?: boolean }) {
   usePointer();
   return (
     <>
       <color attach="background" args={["#12070b"]} />
-      <Composition still={still} />
+      <Composition still={still} ready={ready} />
       <Sparkles count={80} scale={[12, 7, 6]} size={2.4} speed={still ? 0 : 0.35} color="#f2c47e" opacity={0.7} />
     </>
   );
