@@ -15,7 +15,7 @@ export const scrollLock = (lock: boolean) => {
 export function useSmoothScroll(enabled: boolean) {
   useEffect(() => {
     if (!enabled) return;
-    lenis = new Lenis({ duration: 1.15, smoothWheel: true, easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)) });
+    lenis = new Lenis({ lerp: 0.14, smoothWheel: true, wheelMultiplier: 1, touchMultiplier: 1 });
     let raf = 0;
     const loop = (time: number) => {
       lenis?.raf(time);
