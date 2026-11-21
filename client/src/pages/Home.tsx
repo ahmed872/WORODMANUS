@@ -1,105 +1,797 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowDownLeft, ArrowLeft, ArrowUpLeft, Check, ChevronDown, Flower2, Heart, Menu, Plus, Sparkles, X } from "lucide-react";
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { ArrowLeft, ArrowUpLeft, Check, Flower2, Heart, Menu, MousePointer2, Plus, RotateCw, Sparkles, X } from "lucide-react";
+import { categories, colorOptions, previewImage, flowerOptions, gallery, IMG, occasions, productFilters, products, sizeOptions, waLink, wrapOptions, type Category, type FlowerKind, type Product } from "@/petalia/data";
+import { Cursor, Magnetic, Marquee, Reveal, RingGallery, ScrollProgress, ScrollWords, scrollLock, Tilt, useSmoothScroll } from "@/petalia/ui";
 
-type Product = { name: string; en: string; description: string; price: number; image: string; tag: string };
-const WA_NUMBER = "966500000000"; // رقم تجريبي قابل للتعديل قبل الإطلاق
-const waLink = (message: string) => `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(message)}`;
-const products: Product[] = [
-  { name: "باقة عشق", en: "A little love", description: "ورود حمراء منتقاة بتنسيق يفيض بالمشاعر.", price: 420, image: "/images/red-roses-bouquet.png", tag: "الأكثر طلبًا" },
-  { name: "صباح الورد", en: "Morning in bloom", description: "فاوانيا وردية وورود ناعمة لبداية جميلة.", price: 560, image: "/images/peony-pink.jpg", tag: "اختيار المحررة" },
-  { name: "لمسة ربيع", en: "Spring note", description: "توليب موسمي بدرجات فاتحة ومبهجة.", price: 350, image: "/images/white-roses-tulips.png", tag: "جديد" },
-  { name: "أبيض نقي", en: "Pure poetry", description: "ورود بيضاء بملامح هادئة وأنيقة.", price: 390, image: "/images/bouquet-white.jpg", tag: "كلاسيكية" },
-  { name: "حكاية ورد", en: "A story in petals", description: "مزيج فاخر من الأزهار بألوان متناغمة.", price: 480, image: "/images/bouquet-red-editorial.jpg", tag: "تنسيق خاص" },
-  { name: "لحظة فرح", en: "A joyful moment", description: "باقة مبهجة لتقول: يومك أجمل.", price: 320, image: "/images/peony-tall.jpg", tag: "للمناسبات" },
-  { name: "صندوق المحبة", en: "The rose box", description: "ورود وردية داخل صندوق أنيق بتفاصيل ناعمة.", price: 620, image: "/images/peony-rose-box.webp", tag: "هدية فاخرة" },
-  { name: "وردة العمر", en: "Ever after", description: "تنسيق رومانسي من الورود والفاوانيا.", price: 590, image: "/images/peony-rose-box.webp", tag: "للذكرى" },
-  { name: "سحر الطبيعة", en: "Wildly beautiful", description: "أزهار موسمية بطابع حديقة طبيعية.", price: 440, image: "/images/white-roses-tulips.png", tag: "موسمي" },
-  { name: "أناقة الورد", en: "Quiet elegance", description: "تنسيق زهري يوازن بين الرقة والحضور.", price: 680, image: "/images/red-roses-vase.png", tag: "حصري" },
-];
-const categories = [
-  { title: "باقات الورد الطبيعي", en: "The signature bouquet", image: "/images/peony-tall.jpg", shape: "tall" },
-  { title: "الورود الحمراء", en: "Say it in red", image: "/images/red-roses-bouquet.png", shape: "wide" },
-  { title: "الورود الوردية", en: "Softly, in pink", image: "/images/peony-pink.jpg", shape: "square" },
-  { title: "تنسيقات التوليب", en: "Tulip season", image: "/images/white-roses-tulips.png", shape: "square" },
-  { title: "بوكسات الورد", en: "A gift, beautifully", image: "/images/peony-rose-box.webp", shape: "wide" },
-  { title: "تنسيقات المناسبات", en: "For the gathering", image: "/images/bouquet-white.jpg", shape: "tall" },
-  { title: "الهدايا والورود", en: "Little gestures", image: "/images/peony-rose-box.webp", shape: "square" },
-  { title: "تنسيقات الزفاف", en: "For your forever", image: "/images/white-roses-tulips.png", shape: "wide" },
-];
-const occasions = [
-  { title: "أعياد الميلاد", image: "/images/peony-tall.jpg" }, { title: "حفلات الزواج", image: "/images/bouquet-white.jpg" },
-  { title: "الخطوبة", image: "/images/peony-rose-box.webp" }, { title: "التخرج", image: "/images/peony-pink.jpg" },
-  { title: "استقبال المواليد", image: "/images/bouquet-white.jpg" }, { title: "الذكرى السنوية", image: "/images/red-roses-bouquet.png" },
-  { title: "هدايا رومانسية", image: "/images/red-roses-bouquet.png" }, { title: "مناسبات خاصة", image: "/images/white-roses-tulips.png" },
-];
-const flowers = ["ورود طبيعية", "فاوانيا", "توليب", "مزيج موسمي"];
-const colors = ["وردي هادئ", "أحمر عميق", "أبيض عاجي", "ألوان الربيع"];
-const sizes = ["صغير", "متوسط", "كبير"];
-const wraps = ["ورق عاجي", "ورق وردي", "تغليف كتان", "بدون تغليف"];
-const reveal = { hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } };
+const HeroCanvas = lazy(() => import("@/petalia/three/HeroCanvas"));
 
-function SectionHead({ kicker, title, english, light = false }: { kicker: string; title: ReactNode; english?: string; light?: boolean }) {
-  return <div className={`section-head ${light ? "light" : ""}`}><span className="eyebrow">{kicker}</span><h2>{title}</h2>{english && <span className="section-en">{english}</span>}</div>;
-}
-function ImageModal({ image, onClose }: { image: string | null; onClose: () => void }) {
-  useEffect(() => { if (!image) return; const close = (e: KeyboardEvent) => e.key === "Escape" && onClose(); window.addEventListener("keydown", close); document.body.style.overflow = "hidden"; return () => { window.removeEventListener("keydown", close); document.body.style.overflow = ""; }; }, [image, onClose]);
-  return <AnimatePresence>{image && <motion.div className="lightbox" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} role="dialog" aria-modal="true" aria-label="عرض الصورة"><button className="lightbox-close" aria-label="إغلاق" onClick={onClose}><X /></button><motion.img src={image} alt="تنسيق زهري من PETALIA" initial={{ scale: .96 }} animate={{ scale: 1 }} onClick={e => e.stopPropagation()} /></motion.div>}</AnimatePresence>;
+const EASE = [0.16, 1, 0.3, 1] as const;
+const nav = [
+  { text: "الرئيسية", href: "#home" },
+  { text: "المجموعات", href: "#collections" },
+  { text: "تنسيقاتنا", href: "#products" },
+  { text: "مناسباتكم", href: "#occasions" },
+  { text: "صمّم باقتك", href: "#custom" },
+  { text: "قصتنا", href: "#story" },
+];
+
+function useMedia(query: string) {
+  const [match, setMatch] = useState(() => typeof window !== "undefined" && window.matchMedia(query).matches);
+  useEffect(() => {
+    const m = window.matchMedia(query);
+    const on = () => setMatch(m.matches);
+    m.addEventListener("change", on);
+    return () => m.removeEventListener("change", on);
+  }, [query]);
+  return match;
 }
 
+function useEscape(active: boolean, close: () => void) {
+  useEffect(() => {
+    if (!active) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
+    window.addEventListener("keydown", onKey);
+    scrollLock(true);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      scrollLock(false);
+    };
+  }, [active, close]);
+}
+
+/* ------------------------------------------------------------------ */
+function Loader({ onDone }: { onDone: () => void }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    const start = performance.now();
+    let raf = 0;
+    const tick = (t: number) => {
+      const k = Math.min(1, (t - start) / 1500);
+      setN(Math.round((1 - Math.pow(1 - k, 2)) * 100));
+      if (k < 1) raf = requestAnimationFrame(tick);
+      else setTimeout(onDone, 220);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [onDone]);
+  return (
+    <motion.div className="loader" exit={{ clipPath: "inset(0 0 100% 0)" }} transition={{ duration: 1, ease: EASE }}>
+      <svg className="loader-bloom" viewBox="-60 -60 120 120" aria-hidden>
+        {Array.from({ length: 10 }, (_, i) => (
+          <path key={i} d="M0 0 C 18 -14, 20 -42, 0 -52 C -20 -42, -18 -14, 0 0Z" style={{ ["--r" as string]: `${i * 36 + (i % 2) * 18}deg`, ["--d" as string]: `${i * 0.08}s`, ["--s" as string]: i % 2 ? 0.72 : 1 }} />
+        ))}
+        <circle r="6" />
+      </svg>
+      <div className="loader-word" aria-label="PETALIA">
+        {"PETALIA".split("").map((c, i) => (
+          <motion.span key={i} initial={{ y: "100%", opacity: 0 }} animate={{ y: "0%", opacity: 1 }} transition={{ delay: 0.25 + i * 0.06, duration: 0.8, ease: EASE }}>
+            {c}
+          </motion.span>
+        ))}
+      </div>
+      <p>نُحضّر لك تجربة مليئة بالجمال...</p>
+      <div className="loader-count">
+        <span>{String(n).padStart(3, "0")}</span>
+        <i style={{ transform: `scaleX(${n / 100})` }} />
+      </div>
+    </motion.div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+function SectionHead({ kicker, title, en, light }: { kicker: string; title: React.ReactNode; en?: string; light?: boolean }) {
+  return (
+    <div className={`shead ${light ? "light" : ""}`}>
+      <span className="kicker">
+        <i /> {kicker}
+      </span>
+      <h2>{title}</h2>
+      {en && <span className="shead-en">{en}</span>}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+function Occasions({ horizontal }: { horizontal: boolean }) {
+  const section = useRef<HTMLElement>(null);
+  const track = useRef<HTMLDivElement>(null);
+  const [distance, setDistance] = useState(0);
+  useLayoutEffect(() => {
+    if (!horizontal) return;
+    const measure = () => track.current && setDistance(Math.max(0, track.current.scrollWidth - window.innerWidth));
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [horizontal]);
+  const { scrollYProgress } = useScroll({ target: section, offset: ["start start", "end end"] });
+  const x = useTransform(scrollYProgress, [0, 1], [0, distance]);
+  const bar = useTransform(scrollYProgress, [0, 1], [0, 1]);
+
+  const cards = occasions.map((o, i) => (
+    <a className="occ-card" href="#custom" key={o.title} data-cursor="صمّم">
+      <div className="occ-img">
+        <img src={o.image} alt={o.title} loading="lazy" />
+      </div>
+      <span className="occ-num">{String(i + 1).padStart(2, "0")}</span>
+      <div className="occ-copy">
+        <small>{o.en}</small>
+        <h3>{o.title}</h3>
+        <p>{o.line}</p>
+        <span className="occ-cta">
+          اصنعوا باقتها <ArrowUpLeft size={15} />
+        </span>
+      </div>
+    </a>
+  ));
+
+  return (
+    <section id="occasions" ref={section} className={`occasions ${horizontal ? "is-pinned" : ""}`} style={horizontal ? { height: `calc(100vh + ${distance}px)` } : undefined}>
+      <div className="occ-sticky">
+        <div className="occ-head">
+          <SectionHead kicker="لحظات تستحق / 03" title={<>لكل مناسبة... <em>حكاية من الورد</em></>} en="Flowers for your moments" />
+          <p>هدية صغيرة، ذكرى تبقى طويلًا. مرّروا لاكتشاف المناسبات.</p>
+        </div>
+        {horizontal ? (
+          <motion.div className="occ-track" ref={track} style={{ x }}>
+            {cards}
+          </motion.div>
+        ) : (
+          <div className="occ-track swipe">{cards}</div>
+        )}
+        {horizontal && (
+          <div className="occ-progress">
+            <motion.i style={{ scaleX: bar }} />
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+function Campaign() {
+  const ref = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  const clip = useTransform(scrollYProgress, [0, 0.45], ["inset(18% 14% 18% 14% round 220px)", "inset(0% 0% 0% 0% round 0px)"]);
+  const scale = useTransform(scrollYProgress, [0, 1], [1.25, 1]);
+  const y = useTransform(scrollYProgress, [0, 1], ["-8%", "8%"]);
+  return (
+    <section className="campaign" ref={ref}>
+      <motion.div className="campaign-media" style={{ clipPath: clip }}>
+        <motion.img src={IMG.roseBox} alt="ورود وفاوانيا وردية في صندوق فاخر" loading="lazy" style={{ scale, y }} />
+        <div className="campaign-shade" />
+        <div className="campaign-copy">
+          <span className="kicker light">
+            <i /> تنسيق، بإحساس مختلف
+          </span>
+          <h2>
+            <Reveal>الجمال يكمن</Reveal>
+            <Reveal delay={0.1}>
+              <em>في التفاصيل</em>
+            </Reveal>
+          </h2>
+          <p>من أول بتلة نختارها، إلى آخر لمسة على بطاقة الإهداء. نؤمن أن أجمل الهدايا هي التي تُشبه من نهديها.</p>
+          <a className="link light" href="#story">
+            تعرّف على أسلوبنا <ArrowLeft size={16} />
+          </a>
+        </div>
+        <span className="campaign-vertical">THE ART OF GIVING — MMXXVI</span>
+      </motion.div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+function Builder() {
+  const [flower, setFlower] = useState<FlowerKind>("rose");
+  const [color, setColor] = useState(0);
+  const [size, setSize] = useState(1);
+  const [wrap, setWrap] = useState(0);
+  const [card, setCard] = useState("");
+  const preview = previewImage(flower, colorOptions[color].key);
+  const price = sizeOptions[size].price + (flower === "peony" ? 90 : flower === "mixed" ? 45 : 0) + (wrap === 3 ? 35 : 0);
+  const message = `مرحبًا بيتـاليا، أود تصميم باقة خاصة:\nالزهور: ${flowerOptions.find(f => f.key === flower)!.label}\nالألوان: ${colorOptions[color].label}\nالحجم: ${sizeOptions[size].label} (${sizeOptions[size].count} زهرة تقريبًا)\nالتغليف: ${wrapOptions[wrap].label}\nبطاقة الإهداء: ${card || "بدون نص محدد"}\nالتكلفة التقديرية الظاهرة: ${price} ر.س (توضيحية)`;
+
+  return (
+    <section id="custom" className="builder">
+      <div className="builder-stage">
+        <div className="stage-glow" />
+        <div className="stage-scene">
+          <AnimatePresence mode="popLayout">
+            <motion.div key={preview} className="stage-photo-wrap" initial={{ opacity: 0, rotateY: -35, z: -200, x: 80 }} animate={{ opacity: 1, rotateY: 0, z: 0, x: 0 }} exit={{ opacity: 0, rotateY: 35, z: -200, x: -80 }} transition={{ duration: 0.9, ease: EASE }}>
+              <Tilt className="stage-photo" max={9} style={{ ["--wrap" as string]: wrapOptions[wrap].color }}>
+                <motion.img src={preview} alt="مثال حقيقي من تنسيقاتنا قريب من اختياراتك" animate={{ scale: [0.88, 0.95, 1][size] }} transition={{ duration: 0.8, ease: EASE }} />
+              </Tilt>
+            </motion.div>
+          </AnimatePresence>
+          <div className="stage-shadow" />
+        </div>
+        <div className="stage-hud">
+          <span>
+            <Flower2 size={14} /> {sizeOptions[size].count} زهرة · {wrapOptions[wrap].label}
+          </span>
+          <span className="stage-live">
+            <i /> صورة حقيقية من تنسيقات مشابهة لاختياركم
+          </span>
+        </div>
+        {card && (
+          <motion.div className="stage-card" initial={{ opacity: 0, y: 12, rotate: -4 }} animate={{ opacity: 1, y: 0, rotate: -3 }}>
+            <small>بطاقة الإهداء</small>
+            <p>{card}</p>
+          </motion.div>
+        )}
+      </div>
+      <div className="builder-panel">
+        <SectionHead kicker="مساحتك الإبداعية / 04" title={<>اصنع باقتك <em>الخاصة</em></>} en="Made just for you" />
+        <p className="builder-intro">اختاروا التفاصيل، وشاهدوا مثالًا حقيقيًا من تنسيقاتنا يقترب من ذوقكم — ثم أرسلوا اختياراتكم لننسّقها بأيدينا.</p>
+
+        <div className="opt">
+          <label>
+            <b>01</b> نوع الزهور
+          </label>
+          <div className="opt-row">
+            {flowerOptions.map(f => (
+              <button key={f.key} className={flower === f.key ? "on" : ""} onClick={() => setFlower(f.key)} aria-pressed={flower === f.key}>
+                {f.label}
+                <small>{f.en}</small>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="opt">
+          <label>
+            <b>02</b> الألوان
+          </label>
+          <div className="opt-row">
+            {colorOptions.map((c, i) => (
+              <button key={c.key} className={color === i ? "on" : ""} onClick={() => setColor(i)} aria-pressed={color === i}>
+                <span className="swatches">
+                  {c.swatch.slice(0, 3).map(s => (
+                    <i key={s} style={{ background: s }} />
+                  ))}
+                </span>
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="opt">
+          <label>
+            <b>03</b> حجم الباقة
+          </label>
+          <div className="opt-row sizes">
+            {sizeOptions.map((s, i) => (
+              <button key={s.key} className={size === i ? "on" : ""} onClick={() => setSize(i)} aria-pressed={size === i}>
+                {s.label}
+                <small>{s.count} زهرة</small>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="opt">
+          <label>
+            <b>04</b> نوع التغليف
+          </label>
+          <div className="opt-row">
+            {wrapOptions.map((w, i) => (
+              <button key={w.key} className={wrap === i ? "on" : ""} onClick={() => setWrap(i)} aria-pressed={wrap === i}>
+                <span className="swatches">
+                  <i style={{ background: w.color }} />
+                </span>
+                {w.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="opt">
+          <label htmlFor="gift-card">
+            <b>05</b> بطاقة الإهداء
+          </label>
+          <textarea id="gift-card" value={card} maxLength={120} onChange={e => setCard(e.target.value)} placeholder="اكتبوا كلماتكم هنا... وستظهر على البطاقة بجانب الباقة" />
+          <span className="counter">{card.length}/120</span>
+        </div>
+        <div className="builder-total">
+          <div>
+            <small>التكلفة التقديرية</small>
+            <strong>
+              <motion.span key={price} initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+                {price}
+              </motion.span>{" "}
+              <em>ر.س</em>
+            </strong>
+            <span className="demo">سعر توضيحي — يُحدَّد نهائيًا عند التواصل</span>
+          </div>
+          <Magnetic>
+            <a className="btn btn-primary" href={waLink(message)} target="_blank" rel="noreferrer">
+              أرسل اختياراتك عبر واتساب <ArrowUpLeft size={17} />
+            </a>
+          </Magnetic>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+function ProductModal({ product, onClose }: { product: Product | null; onClose: () => void }) {
+  useEscape(!!product, onClose);
+  return (
+    <AnimatePresence>
+      {product && (
+        <motion.div className="modal-back" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+          <motion.div className="modal" role="dialog" aria-modal="true" aria-label={`تفاصيل ${product.name}`} initial={{ opacity: 0, y: 40, rotateX: 8 }} animate={{ opacity: 1, y: 0, rotateX: 0 }} exit={{ opacity: 0, y: 20 }} transition={{ duration: 0.6, ease: EASE }} onClick={e => e.stopPropagation()}>
+            <button className="modal-x" onClick={onClose} aria-label="إغلاق" autoFocus>
+              <X size={18} />
+            </button>
+            <div className="modal-img">
+              <motion.img layoutId={`img-${product.name}`} src={product.image} alt={product.name} />
+            </div>
+            <div className="modal-copy">
+              <span className="modal-en">{product.en}</span>
+              <h2>{product.name}</h2>
+              <p>{product.description}</p>
+              <ul>
+                {product.notes.map(n => (
+                  <li key={n}>
+                    <Check size={15} /> {n}
+                  </li>
+                ))}
+              </ul>
+              <div className="modal-price">
+                {product.price} <small>ر.س — سعر توضيحي</small>
+              </div>
+              <a className="btn btn-primary wide" href={waLink(`مرحبًا بيتـاليا، أود الاستفسار عن ${product.name} — السعر الظاهر ${product.price} ر.س توضيحي.`)} target="_blank" rel="noreferrer">
+                اطلبوا عبر واتساب <ArrowUpLeft size={17} />
+              </a>
+              <small className="fine">السعر المعروض تجريبي للتوضيح فقط، ولا يمثّل مخزونًا فعليًا.</small>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function Lightbox({ src, onClose }: { src: string | null; onClose: () => void }) {
+  useEscape(!!src, onClose);
+  return (
+    <AnimatePresence>
+      {src && (
+        <motion.div className="lightbox" role="dialog" aria-modal="true" aria-label="عرض الصورة" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+          <button className="modal-x fixed" aria-label="إغلاق" onClick={onClose} autoFocus>
+            <X size={18} />
+          </button>
+          <motion.img src={src} alt="تنسيق زهري من PETALIA" initial={{ scale: 0.9, rotateY: -12 }} animate={{ scale: 1, rotateY: 0 }} transition={{ duration: 0.6, ease: EASE }} onClick={e => e.stopPropagation()} />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/* ================================================================== */
 export default function Home() {
-  const reduceMotion = useReducedMotion();
-  const [loaded, setLoaded] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const reduce = !!useReducedMotion();
+  const wide = useMedia("(min-width: 900px)");
+  const [loading, setLoading] = useState(true);
+  const [onDark, setOnDark] = useState(true);
+  const [hidden, setHidden] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const [filter, setFilter] = useState<Category | "all">("all");
   const [product, setProduct] = useState<Product | null>(null);
   const [lightbox, setLightbox] = useState<string | null>(null);
-  const [selected, setSelected] = useState({ flower: flowers[0], color: colors[0], size: sizes[1], wrap: wraps[0], card: "" });
   const [favorites, setFavorites] = useState<string[]>([]);
-  const motionProps = reduceMotion ? {} : { initial: "hidden", whileInView: "visible", viewport: { once: true, margin: "-80px" }, variants: reveal, transition: { duration: .72, ease: [0.22, 1, 0.36, 1] as const } };
-  useEffect(() => { const timer = window.setTimeout(() => setLoaded(true), 1100); const onScroll = () => setScrolled(window.scrollY > 32); window.addEventListener("scroll", onScroll, { passive: true }); return () => { window.clearTimeout(timer); window.removeEventListener("scroll", onScroll); }; }, []);
-  const bouquetMessage = useMemo(() => `مرحبًا بيتـاليا، أود تصميم باقة خاصة:\nالزهور: ${selected.flower}\nالألوان: ${selected.color}\nالحجم: ${selected.size}\nالتغليف: ${selected.wrap}\nبطاقة الإهداء: ${selected.card || "بدون نص محدد"}`, [selected]);
-  const nav = [{ text: "الرئيسية", href: "#home" }, { text: "باقات الورد", href: "#collections" }, { text: "تنسيقاتنا", href: "#products" }, { text: "مناسباتكم", href: "#occasions" }, { text: "قصتنا", href: "#story" }, { text: "تواصل معنا", href: "#contact" }];
-  const closeMenu = () => setMenuOpen(false);
+  const done = useCallback(() => setLoading(false), []);
+  const closeProduct = useCallback(() => setProduct(null), []);
+  const closeLightbox = useCallback(() => setLightbox(null), []);
+  const closeMenu = useCallback(() => setMenu(false), []);
+  useEscape(menu, closeMenu);
+  useSmoothScroll(!reduce);
 
-  return <div className="site-shell" dir="rtl">
-    <AnimatePresence>{!loaded && <motion.div className="loader-screen" initial={{ opacity: 1 }} exit={{ opacity: 0, y: -12, transition: { duration: .55 } }}><div className="loader-flower"><span /><span /><span /><span /><span /><i /></div><div className="loader-wordmark">PETALIA</div><p>نُحضّر لك تجربة مليئة بالجمال...</p><div className="loader-line"><i /></div></motion.div>}</AnimatePresence>
-    <div className="topline"><span>تفاصيل صغيرة، مشاعر كبيرة</span><span>تنسيق يليق بلحظاتكم</span></div>
-    <header className={`navbar ${scrolled ? "compact" : ""}`}>
-      <button className="mobile-toggle" aria-label={menuOpen ? "إغلاق القائمة" : "فتح القائمة"} onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X /> : <Menu />}</button>
-      <a className="wordmark" href="#home" onClick={closeMenu}><span className="wordmark-flower"><Flower2 size={19} strokeWidth={1.3} /></span><span>PETALIA<small>بيتـاليا للزهور</small></span></a>
-      <nav className={menuOpen ? "nav-links open" : "nav-links"} aria-label="القائمة الرئيسية">{nav.map(item => <a key={item.href} href={item.href} onClick={closeMenu}>{item.text}</a>)}</nav>
-      <div className="nav-actions"><a href={waLink("مرحبًا بيتـاليا، أود الاستفسار عن تنسيقاتكم.")} className="nav-contact"><span>لنتحدث عن الورد</span><ArrowUpLeft size={16} /></a></div>
-    </header>
-    <main>
-      <section id="home" className="hero">
-        <div className="hero-copy"><span className="eyebrow hero-eyebrow"><i /> استوديو زهور، بتفاصيل من القلب</span><h1>بعض المشاعر...<br /><em>لا تُقال بالكلمات</em></h1><p>نختار أجمل الزهور وننسّقها بعناية،<br className="desktop-only" /> لتصل مشاعركم بأجمل صورة.</p><div className="hero-actions"><a className="button button-dark" href="#products">اكتشف مجموعتنا <ArrowLeft size={16} /></a><a className="button button-outline" href="#custom">صمّم باقتك الخاصة <Sparkles size={16} /></a></div><div className="hero-note"><span className="note-rule" /> <span>كل باقة تبدأ بحكاية</span><span className="note-en">A little something, thoughtfully made</span></div></div>
-        <div className="hero-visual"><div className="hero-photo"><img src="/images/peony-tall.jpg" alt="تنسيق فاخر من الورود والفاوانيا الوردية" fetchPriority="high" /><div className="photo-grain" /></div><div className="hero-caption"><span>01 / 04</span><span>مختارة بعناية، لتُهدى بحب</span></div><div className="hero-stamp"><Flower2 size={20} /><span>أزهار<br />تُحكى</span></div><div className="hero-vertical">PETALIA FLORAL STUDIO · RIYADH</div></div>
-        <div className="hero-bottom"><a href="#collections"><ArrowDownLeft size={15} /> اكتشف الحكاية</a><span>زهور مختارة · تنسيق يدوي · هدايا من القلب</span></div>
-      </section>
+  useEffect(() => {
+    let last = 0;
+    const onScroll = () => {
+      const y = window.scrollY;
+      const darkZones = Array.from(document.querySelectorAll<HTMLElement>("[data-dark]"));
+      setOnDark(darkZones.some(el => {
+        const r = el.getBoundingClientRect();
+        return r.top <= 40 && r.bottom >= 40;
+      }));
+      setHidden(y > 600 && y > last + 4);
+      if (y < last - 4) setHidden(false);
+      last = y;
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
-      <section id="collections" className="collections section-pad"><div className="collection-intro"><SectionHead kicker="مجموعاتنا / 01" title={<>اختيرت بحب...<br />وصُممت لتُهدى</>} english="A collection made to be remembered" /><p>لكل لحظة لونها، ولكل شعور زهرة تشبهه. اكتشفوا مجموعاتنا المختارة بعناية.</p><a href="#products" className="text-link">تصفّح كل الباقات <ArrowLeft size={15} /></a><span className="intro-flower"><Flower2 size={90} strokeWidth={.6} /></span></div><div className="category-grid">{categories.map((cat, i) => <a href="#products" key={cat.title} className={`category-tile ${cat.shape}`}><img src={cat.image} alt={cat.title} loading="lazy" /><span className="cat-index">0{i + 1}</span><div className="category-label"><small>{cat.en}</small><strong>{cat.title}</strong><span className="cat-arrow"><ArrowUpLeft size={17} /></span></div></a>)}</div></section>
+  const hero = useRef<HTMLElement>(null);
+  const { scrollYProgress: heroP } = useScroll({ target: hero, offset: ["start start", "end start"] });
+  const heroCopyY = useTransform(heroP, [0, 1], ["0%", "35%"]);
+  const heroCopyO = useTransform(heroP, [0, 0.7], [1, 0]);
 
-      <section id="products" className="products section-pad"><div className="products-head"><SectionHead kicker="تشكيلة PETALIA / 02" title="وردٌ يليق بالحكاية" english="The flower edit" /><a className="text-link" href={waLink("مرحبًا بيتـاليا، أود رؤية المجموعة الكاملة من الباقات.")}>اطلبوا المجموعة الكاملة <ArrowLeft size={15} /></a></div><div className="product-grid">{products.map((item, i) => <motion.article className="product-card" key={item.name} {...motionProps}><div className="product-image" onClick={() => setProduct(item)} role="button" tabIndex={0} onKeyDown={e => e.key === "Enter" && setProduct(item)}><img src={item.image} alt={item.name} loading="lazy" /><span className="product-tag">{item.tag}</span><button className={`favorite ${favorites.includes(item.name) ? "active" : ""}`} aria-label="إضافة إلى المفضلة" onClick={e => { e.stopPropagation(); setFavorites(favorites.includes(item.name) ? favorites.filter(x => x !== item.name) : [...favorites, item.name]); }}><Heart size={17} fill={favorites.includes(item.name) ? "currentColor" : "none"} /></button><span className="quick-view">اكتشف الباقة <ArrowUpLeft size={15} /></span></div><div className="product-info"><span className="product-en">{item.en}</span><div className="product-title-row"><div><h3>{item.name}</h3><p>{item.description}</p></div><span className="price">{item.price} <small>ر.س</small></span></div><div className="product-footer"><button onClick={() => setProduct(item)}>التفاصيل <Plus size={14} /></button><a href={waLink(`مرحبًا بيتـاليا، أود طلب ${item.name} — السعر الظاهر ${item.price} ر.س توضيحي.`)} target="_blank" rel="noreferrer">اطلب عبر واتساب <ArrowUpLeft size={14} /></a></div><small className="demo-price">السعر المعروض للتوضيح فقط</small></div></motion.article>)}</div><div className="products-footnote">جميع الأسعار المعروضة تجريبية للتوضيح، وتُحدّد التفاصيل عند التواصل.</div></section>
+  const story = useRef<HTMLElement>(null);
+  const { scrollYProgress: storyP } = useScroll({ target: story, offset: ["start end", "end start"] });
+  const storyImgY = useTransform(storyP, [0, 1], ["-12%", "12%"]);
+  const storyBadgeR = useTransform(storyP, [0, 1], [0, 220]);
 
-      <section className="campaign"><div className="campaign-image"><img src="/images/peony-rose-box.webp" alt="تفاصيل بتلات وتنسيق زهور فاخر" loading="lazy" /><span className="campaign-vertical">THE ART OF GIVING</span></div><div className="campaign-copy"><span className="eyebrow">تنسيق، بإحساس مختلف</span><h2>الجمال يكمن<br /><em>في التفاصيل</em></h2><p>من أول بتلة نختارها، إلى آخر لمسة على بطاقة الإهداء. نؤمن أن أجمل الهدايا هي التي تُشبه من نهديها.</p><a className="text-link" href="#story">تعرّف على أسلوبنا <ArrowLeft size={15} /></a><span className="campaign-script">made with feeling</span></div></section>
+  const shown = useMemo(() => (filter === "all" ? products : products.filter(p => p.category === filter)), [filter]);
+  const toggleFav = (name: string) => setFavorites(f => (f.includes(name) ? f.filter(x => x !== name) : [...f, name]));
 
-      <section id="occasions" className="occasions section-pad"><div className="occasion-heading"><SectionHead kicker="لحظات تستحق / 03" title="لكل مناسبة... حكاية من الورد" english="Flowers for your moments" /><p>هدية صغيرة، ذكرى تبقى طويلة.</p></div><div className="occasion-grid">{occasions.map((item, i) => <a className="occasion-item" href="#custom" key={item.title}><img src={item.image} alt={item.title} loading="lazy" /><span className="occasion-number">0{i + 1}</span><span className="occasion-name">{item.title}<ArrowUpLeft size={15} /></span></a>)}</div></section>
+  return (
+    <div className="petalia" dir="rtl">
+      <AnimatePresence>{loading && <Loader onDone={done} />}</AnimatePresence>
+      <Cursor />
+      <ScrollProgress />
 
-      <section id="custom" className="custom section-pad"><div className="custom-visual"><div className="custom-image"><img src="/images/peony-tall.jpg" alt="زهور مختارة لصنع باقة خاصة" loading="lazy" /><div className="custom-seal"><Flower2 /><span>اختيارك<br />حكايتك</span></div></div><span className="custom-side-note">A bouquet, your way</span></div><div className="custom-form"><SectionHead kicker="مساحتك الإبداعية / 04" title={<>اصنع باقتك<br /><em>الخاصة</em></>} english="Made just for you" /><p className="custom-intro">اختاروا التفاصيل التي تحبونها، ونحن ننسّقها لتُصبح باقة تشبهكم.</p><div className="choice-group"><label>01 <span>نوع الزهور</span></label><div className="choice-options">{flowers.map(x => <button key={x} className={selected.flower === x ? "chosen" : ""} onClick={() => setSelected({ ...selected, flower: x })}>{x}</button>)}</div></div><div className="choice-group"><label>02 <span>الألوان</span></label><div className="choice-options">{colors.map((x, i) => <button key={x} className={selected.color === x ? "chosen" : ""} onClick={() => setSelected({ ...selected, color: x })}><i className={`swatch swatch-${i}`} />{x}</button>)}</div></div><div className="choice-group"><label>03 <span>حجم الباقة</span></label><div className="choice-options">{sizes.map(x => <button key={x} className={selected.size === x ? "chosen" : ""} onClick={() => setSelected({ ...selected, size: x })}>{x}</button>)}</div></div><div className="choice-group"><label>04 <span>نوع التغليف</span></label><div className="choice-options">{wraps.map(x => <button key={x} className={selected.wrap === x ? "chosen" : ""} onClick={() => setSelected({ ...selected, wrap: x })}>{x}</button>)}</div></div><label className="card-label" htmlFor="gift-card">05 <span>بطاقة الإهداء</span></label><textarea id="gift-card" value={selected.card} maxLength={120} onChange={e => setSelected({ ...selected, card: e.target.value })} placeholder="اكتبوا كلماتكم هنا..." /><a className="button button-dark custom-submit" href={waLink(bouquetMessage)} target="_blank" rel="noreferrer">أرسل اختياراتك عبر واتساب <ArrowUpLeft size={16} /></a><small className="placeholder-note">رقم التواصل الحالي تجريبي وقابل للتعديل.</small></div></section>
+      {/* ---------------- NAV ---------------- */}
+      <header className={`nav ${onDark ? "on-dark" : "on-light"} ${hidden && !menu ? "is-hidden" : ""} ${menu ? "menu-open" : ""}`}>
+        <a className="brand" href="#home" onClick={closeMenu} aria-label="PETALIA — الرئيسية">
+          <span className="brand-mark">
+            <Flower2 size={18} strokeWidth={1.3} />
+          </span>
+          <span className="brand-word">
+            PETALIA<small>بيتـاليا للزهور</small>
+          </span>
+        </a>
+        <nav className="nav-links" aria-label="القائمة الرئيسية">
+          {nav.map(n => (
+            <a key={n.href} href={n.href}>
+              <span data-text={n.text}>{n.text}</span>
+            </a>
+          ))}
+        </nav>
+        <div className="nav-end">
+          <Magnetic>
+            <a className="nav-cta" href={waLink("مرحبًا بيتـاليا، أود الاستفسار عن تنسيقاتكم.")} target="_blank" rel="noreferrer">
+              <span>لنتحدث عن الورد</span>
+              <ArrowUpLeft size={16} />
+            </a>
+          </Magnetic>
+          <button className="burger" aria-label={menu ? "إغلاق القائمة" : "فتح القائمة"} aria-expanded={menu} onClick={() => setMenu(m => !m)}>
+            {menu ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
+      </header>
+      <AnimatePresence>
+        {menu && (
+          <motion.div className="mobile-menu" initial={{ clipPath: "circle(0% at 8% 4%)" }} animate={{ clipPath: "circle(150% at 8% 4%)" }} exit={{ clipPath: "circle(0% at 8% 4%)" }} transition={{ duration: 0.7, ease: EASE }}>
+            <nav aria-label="قائمة الهاتف">
+              {nav.map((n, i) => (
+                <motion.a key={n.href} href={n.href} onClick={closeMenu} initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 + i * 0.06, duration: 0.7, ease: EASE }}>
+                  <small>0{i + 1}</small>
+                  {n.text}
+                </motion.a>
+              ))}
+            </nav>
+            <a className="btn btn-light" href={waLink("مرحبًا بيتـاليا، أود الاستفسار عن تنسيقاتكم.")} target="_blank" rel="noreferrer">
+              تواصلوا عبر واتساب <ArrowUpLeft size={16} />
+            </a>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <section id="story" className="story section-pad"><div className="story-image"><img src="/images/peony-tall.jpg" alt="أزهار PETALIA المختارة بعناية" loading="lazy" /><span>FLORAL NOTES · VOL. 01</span></div><div className="story-copy"><span className="eyebrow">حكايتنا / 05</span><h2>نؤمن أن لكل<br /><em>زهرة لغة</em></h2><p>بعض الكلمات لا تحتاج إلى صوت. نختار الزهور كما تُختار الكلمات الجميلة؛ بقلبٍ حاضر، واهتمام بالتفاصيل، ورغبة في أن تصل مشاعركم كما هي.</p><p>في PETALIA، كل تنسيق مساحة صغيرة للتعبير، وكل باقة بداية لحكاية تُهدى.</p><span className="story-sign">بكل حب، PETALIA <Flower2 size={18} /></span></div></section>
+      <main>
+        {/* ---------------- HERO ---------------- */}
+        <section id="home" className="hero" ref={hero} data-dark>
+          <Suspense fallback={<div className="hero-canvas hero-canvas-fallback" />}>
+            <HeroCanvas still={reduce} />
+          </Suspense>
+          <div className="hero-vignette" />
+          <motion.div className="hero-copy" style={{ y: heroCopyY, opacity: heroCopyO }}>
+            <motion.span className="kicker light" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.9, duration: 0.8 }}>
+              <i /> استوديو زهور فاخر · الرياض
+            </motion.span>
+            <h1>
+              <span className="line">
+                <motion.span initial={{ y: "110%" }} animate={{ y: 0 }} transition={{ delay: 1.95, duration: 1.2, ease: EASE }}>
+                  بعض المشاعر...
+                </motion.span>
+              </span>
+              <span className="line">
+                <motion.em initial={{ y: "110%" }} animate={{ y: 0 }} transition={{ delay: 2.08, duration: 1.2, ease: EASE }}>
+                  لا تُقال بالكلمات
+                </motion.em>
+              </span>
+            </h1>
+            <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2.3, duration: 0.9 }}>
+              نختار أجمل الزهور وننسّقها بعناية، لتصل مشاعركم بأجمل صورة.
+            </motion.p>
+            <motion.div className="hero-actions" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2.45, duration: 0.9 }}>
+              <Magnetic>
+                <a className="btn btn-light" href="#products">
+                  اكتشف مجموعتنا <ArrowLeft size={17} />
+                </a>
+              </Magnetic>
+              <Magnetic>
+                <a className="btn btn-ghost" href="#custom">
+                  <Sparkles size={16} /> صمّم باقتك الخاصة
+                </a>
+              </Magnetic>
+            </motion.div>
+            <motion.div className="hero-stats" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.7, duration: 1 }}>
+              <div>
+                <strong>100%</strong>
+                <span>زهور طبيعية طازجة</span>
+              </div>
+              <div>
+                <strong>يدوي</strong>
+                <span>كل تنسيق بلمسة فنان</span>
+              </div>
+              <div>
+                <strong>نفس اليوم</strong>
+                <span>توصيل داخل الرياض*</span>
+              </div>
+            </motion.div>
+          </motion.div>
+          <div className="hero-side">
+            <span>PETALIA FLORAL STUDIO</span>
+            <span>EST. WITH LOVE</span>
+          </div>
+          <div className="hero-hint">
+            <MousePointer2 size={14} /> حرّكوا المؤشر لاستكشاف المشهد
+          </div>
+          <a className="hero-scroll" href="#collections" aria-label="انتقل إلى المجموعات">
+            <span>مرّر</span>
+            <i />
+          </a>
+        </section>
 
-      <section className="gallery section-pad"><div className="gallery-top"><SectionHead kicker="من عالم PETALIA / 06" title="تفاصيل تزهر" english="A little world in bloom" /><a href="#contact" className="text-link">شاركونا لحظاتكم <ArrowLeft size={15} /></a></div><div className="gallery-grid">{["/images/red-roses-bouquet.png", "/images/peony-tall.jpg", "/images/peony-rose-box.webp", "/images/white-roses-tulips.png", "/images/white-roses-tulips.png", "/images/bouquet-white.jpg"].map((image, i) => <button className={`gallery-item gallery-${i + 1}`} key={image} onClick={() => setLightbox(image)} aria-label={`تكبير صورة زهور ${i + 1}`}><img src={image} alt={["ورود حمراء فاخرة", "فاوانيا وردية", "صندوق ورود", "ورود وتوليب", "توليب ناعم", "تنسيق زفاف"][i]} loading="lazy" /><span><Plus size={18} /></span></button>)}</div><div className="gallery-caption"><span>@PETALIA.FLOWERS</span><span>لحظاتكم، كما تروْنها</span></div></section>
+        <Marquee className="marquee-main" items={[<em key="a">Flowers, thoughtfully told</em>, "كل زهرة تحكي حكاية", <em key="b">Made with feeling</em>, "تنسيق يدوي من القلب", <em key="c">Since the first petal</em>, "هدايا تبقى في الذاكرة"]} />
 
-      <section className="testimonials section-pad"><SectionHead kicker="كلمات دافئة / 07" title="أثرٌ يبقى" english="A note from the heart" /><div className="reviews"><article><span className="quote-mark">“</span><p>وصلت الباقة أجمل مما تخيلت... كل تفصيلة فيها كانت تشبه المناسبة.</p><small>مراجعة تجريبية — مثال توضيحي</small></article><article><span className="quote-mark">“</span><p>ألوان هادئة وتنسيق بذوق رفيع. كانت هدية مثالية لشخص عزيز.</p><small>مراجعة تجريبية — مثال توضيحي</small></article><article><span className="quote-mark">“</span><p>فكرة تخصيص الباقة جعلت الهدية شخصية ومختلفة جدًا.</p><small>مراجعة تجريبية — مثال توضيحي</small></article></div><div className="review-disclaimer">النصوص أعلاه تجريبية وليست تقييمات حقيقية من عملاء.</div></section>
+        {/* ---------------- COLLECTIONS ---------------- */}
+        <section id="collections" className="collections pad">
+          <div className="coll-intro">
+            <SectionHead kicker="مجموعاتنا / 01" title={<>اختيرت بحب...<br /><em>وصُممت لتُهدى</em></>} en="A collection made to be remembered" />
+            <p>لكل لحظة لونها، ولكل شعور زهرة تشبهه. اكتشفوا مجموعاتنا المختارة بعناية — وحرّكوا المؤشر فوق البطاقات.</p>
+            <a href="#products" className="link">
+              تصفّح كل الباقات <ArrowLeft size={16} />
+            </a>
+          </div>
+          <div className="coll-grid">
+            {categories.map((c, i) => (
+              <motion.a href="#products" key={c.title} className={`coll-tile t${i + 1}`} initial={{ opacity: 0, y: 60 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }} transition={{ duration: 1, ease: EASE, delay: (i % 3) * 0.08 }} data-cursor="اكتشف">
+                <Tilt className="coll-tilt" max={8}>
+                  <img src={c.image} alt={c.title} loading="lazy" />
+                  <span className="coll-idx">{String(i + 1).padStart(2, "0")}</span>
+                  <div className="coll-label">
+                    <small>{c.en}</small>
+                    <strong>{c.title}</strong>
+                  </div>
+                  <span className="coll-arrow">
+                    <ArrowUpLeft size={18} />
+                  </span>
+                </Tilt>
+              </motion.a>
+            ))}
+          </div>
+        </section>
 
-      <section id="contact" className="contact-band"><div><span className="eyebrow">لديكم حكاية؟</span><h2>دعوا الورد يقول<br /><em>ما تعجز عنه الكلمات.</em></h2><p>نحن هنا لنختار معكم باقة تليق بكل ما تريدون قوله.</p><a className="button button-ivory" href={waLink("مرحبًا بيتـاليا، أود الاستفسار عن تنسيق باقة لمناسبة خاصة.")} target="_blank" rel="noreferrer">ابدأوا حكايتكم معنا <ArrowUpLeft size={16} /></a></div><div className="contact-flower"><Flower2 size={205} strokeWidth={.45} /></div></section>
-    </main>
-    <footer className="footer"><div className="footer-main"><div className="footer-brand"><a className="wordmark footer-wordmark" href="#home"><span className="wordmark-flower"><Flower2 size={19} strokeWidth={1.3} /></span><span>PETALIA<small>بيتـاليا للزهور</small></span></a><p>كل زهرة تحكي حكاية</p><span className="footer-en">Flowers, thoughtfully told.</span></div><div className="footer-col"><h3>اكتشفوا</h3><a href="#home">الرئيسية</a><a href="#collections">باقات الورد</a><a href="#occasions">مناسباتكم</a><a href="#story">قصتنا</a></div><div className="footer-col"><h3>اختاروا حسب الشعور</h3><a href="#products">الورود الحمراء</a><a href="#products">تنسيقات التوليب</a><a href="#products">بوكسات الورد</a><a href="#custom">صمموا باقتكم</a></div><div className="footer-col footer-contact"><h3>يسعدنا تواصلكم</h3><span>الرياض، المملكة العربية السعودية</span><span>رقم التواصل: placeholder قابل للتعديل</span><a className="footer-wa" href={waLink("مرحبًا بيتـاليا، أود التواصل معكم.")} target="_blank" rel="noreferrer">تواصلوا عبر واتساب <ArrowUpLeft size={15} /></a><div className="socials"><a href="#contact" aria-label="انستغرام تجريبي">Instagram ↗</a><a href="#contact" aria-label="بنترست تجريبي">Pinterest ↗</a></div></div></div><div className="footer-bottom"><span>© PETALIA — بيتـاليا للزهور</span><span>صُنع بعناية، ليُهدى بحب</span><a href="#home">العودة إلى الأعلى <ArrowUpLeft size={13} /></a></div></footer>
-    <a className="whatsapp-float" href={waLink("مرحبًا بيتـاليا، أود الاستفسار عن باقات الورد.")} target="_blank" rel="noreferrer" aria-label="تواصل عبر واتساب"><span className="wa-icon">◉</span><span>نحن هنا</span></a>
+        {/* ---------------- PRODUCTS ---------------- */}
+        <section id="products" className="products pad">
+          <div className="products-head">
+            <SectionHead kicker="تشكيلة PETALIA / 02" title={<>وردٌ يليق <em>بالحكاية</em></>} en="The flower edit" />
+            <div className="filters" role="tablist" aria-label="تصفية التشكيلة">
+              {productFilters.map(f => (
+                <button key={f.key} role="tab" aria-selected={filter === f.key} className={filter === f.key ? "on" : ""} onClick={() => setFilter(f.key)}>
+                  {filter === f.key && <motion.i layoutId="filter-pill" className="pill" transition={{ type: "spring", stiffness: 380, damping: 32 }} />}
+                  <span>{f.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <motion.div className="product-grid" layout>
+            <AnimatePresence mode="popLayout">
+              {shown.map((p, i) => (
+                <motion.article layout key={p.name} className="pcard" initial={{ opacity: 0, y: 40, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }} transition={{ duration: 0.7, ease: EASE, delay: i * 0.04 }}>
+                  <Tilt className="pcard-media" max={7}>
+                    <button className="pcard-open" onClick={() => setProduct(p)} aria-label={`تفاصيل ${p.name}`} data-cursor="عرض">
+                      <motion.img layoutId={`img-${p.name}`} src={p.image} alt={p.name} loading="lazy" />
+                    </button>
+                    <span className="pcard-tag">{p.tag}</span>
+                    <button className={`fav ${favorites.includes(p.name) ? "on" : ""}`} aria-label={favorites.includes(p.name) ? "إزالة من المفضلة" : "إضافة إلى المفضلة"} aria-pressed={favorites.includes(p.name)} onClick={() => toggleFav(p.name)}>
+                      <Heart size={17} fill={favorites.includes(p.name) ? "currentColor" : "none"} />
+                    </button>
+                  </Tilt>
+                  <div className="pcard-info">
+                    <span className="pcard-en">{p.en}</span>
+                    <div className="pcard-row">
+                      <h3>{p.name}</h3>
+                      <span className="price">
+                        {p.price} <small>ر.س</small>
+                      </span>
+                    </div>
+                    <p>{p.description}</p>
+                    <div className="pcard-actions">
+                      <button onClick={() => setProduct(p)}>
+                        التفاصيل <Plus size={14} />
+                      </button>
+                      <a href={waLink(`مرحبًا بيتـاليا، أود طلب ${p.name} — السعر الظاهر ${p.price} ر.س توضيحي.`)} target="_blank" rel="noreferrer">
+                        اطلب عبر واتساب <ArrowUpLeft size={14} />
+                      </a>
+                    </div>
+                  </div>
+                </motion.article>
+              ))}
+            </AnimatePresence>
+          </motion.div>
+          <p className="footnote">جميع الأسعار المعروضة تجريبية للتوضيح، وتُحدَّد التفاصيل عند التواصل.</p>
+        </section>
 
-    <AnimatePresence>{product && <motion.div className="modal-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setProduct(null)}><motion.div className="product-modal" role="dialog" aria-modal="true" aria-label={`تفاصيل ${product.name}`} initial={{ opacity: 0, y: 24, scale: .98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 12 }} onClick={e => e.stopPropagation()}><button className="modal-close" onClick={() => setProduct(null)} aria-label="إغلاق"><X /></button><div className="modal-photo"><img src={product.image} alt={product.name} /></div><div className="modal-copy"><span className="eyebrow">{product.en}</span><h2>{product.name}</h2><p>{product.description}</p><span className="modal-price">{product.price} <small>ر.س — سعر توضيحي</small></span><div className="modal-detail"><Check size={16} /> تنسيق يدوي بتفاصيل قابلة للتخصيص</div><a className="button button-dark" href={waLink(`مرحبًا بيتـاليا، أود الاستفسار عن ${product.name} — السعر الظاهر ${product.price} ر.س توضيحي.`)} target="_blank" rel="noreferrer">اطلبوا عبر واتساب <ArrowUpLeft size={16} /></a><small className="demo-price">السعر المعروض تجريبي للتوضيح فقط.</small></div></motion.div></motion.div>}</AnimatePresence>
-    <ImageModal image={lightbox} onClose={() => setLightbox(null)} />
-  </div>;
+        <Campaign />
+
+        <Occasions horizontal={wide && !reduce} />
+
+        <Builder />
+
+        {/* ---------------- STORY ---------------- */}
+        <section id="story" className="story pad" ref={story}>
+          <div className="story-media">
+            <div className="story-frame">
+              <motion.img src={IMG.peonyPink} alt="فاوانيا وردية في مزهرية زجاجية" loading="lazy" style={{ y: storyImgY }} />
+            </div>
+            <motion.svg className="story-badge" viewBox="0 0 200 200" style={{ rotate: storyBadgeR }} aria-hidden>
+              <defs>
+                <path id="circ" d="M100,100 m-78,0 a78,78 0 1,1 156,0 a78,78 0 1,1 -156,0" />
+              </defs>
+              <text>
+                <textPath href="#circ">FLOWERS · THOUGHTFULLY · TOLD · PETALIA · STUDIO ·</textPath>
+              </text>
+            </motion.svg>
+            <span className="story-flower">
+              <Flower2 size={34} strokeWidth={1} />
+            </span>
+          </div>
+          <div className="story-copy">
+            <SectionHead kicker="حكايتنا / 05" title={<>نؤمن أن لكل <em>زهرة لغة</em></>} en="Floral notes · Vol. 01" />
+            <ScrollWords className="story-big" text="بعض الكلمات لا تحتاج إلى صوت. نختار الزهور كما تُختار الكلمات الجميلة؛ بقلبٍ حاضر، واهتمام بالتفاصيل، ورغبة في أن تصل مشاعركم كما هي." />
+            <p className="story-small">في PETALIA، كل تنسيق مساحة صغيرة للتعبير، وكل باقة بداية لحكاية تُهدى.</p>
+            <div className="story-pillars">
+              {[
+                ["اختيار", "زهور موسمية منتقاة كل صباح"],
+                ["تنسيق", "أيدٍ تعرف لغة الألوان"],
+                ["إهداء", "تغليف وبطاقة بعناية كاملة"],
+              ].map(([t, d], i) => (
+                <motion.div key={t} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.12, duration: 0.9, ease: EASE }}>
+                  <b>0{i + 1}</b>
+                  <strong>{t}</strong>
+                  <span>{d}</span>
+                </motion.div>
+              ))}
+            </div>
+            <span className="sign">
+              بكل حب، PETALIA <Flower2 size={18} />
+            </span>
+          </div>
+        </section>
+
+        {/* ---------------- GALLERY ---------------- */}
+        <section className="gallery" data-dark>
+          <div className="gallery-head pad-x">
+            <SectionHead light kicker="من عالم PETALIA / 06" title={<>تفاصيل <em>تزهر</em></>} en="A little world in bloom" />
+            <p>اسحبوا الحلقة لتدويرها، واضغطوا على أي صورة لتكبيرها.</p>
+          </div>
+          <RingGallery items={gallery} onOpen={setLightbox} />
+          <div className="gallery-foot pad-x">
+            <span>@PETALIA.FLOWERS</span>
+            <span>لحظاتكم، كما ترونها</span>
+          </div>
+        </section>
+
+        {/* ---------------- TESTIMONIALS ---------------- */}
+        <section className="testimonials pad">
+          <SectionHead kicker="كلمات دافئة / 07" title={<>أثرٌ <em>يبقى</em></>} en="A note from the heart" />
+          <div className="reviews">
+            {[
+              "وصلت الباقة أجمل مما تخيلت... كل تفصيلة فيها كانت تشبه المناسبة.",
+              "ألوان هادئة وتنسيق بذوق رفيع. كانت هدية مثالية لشخص عزيز.",
+              "فكرة تخصيص الباقة جعلت الهدية شخصية ومختلفة جدًا.",
+            ].map((r, i) => (
+              <motion.article key={i} initial={{ opacity: 0, y: 50, rotate: i === 1 ? 0 : i === 0 ? 2 : -2 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.12, duration: 1, ease: EASE }}>
+                <span className="q">“</span>
+                <p>{r}</p>
+                <div className="stars" aria-label="تقييم توضيحي">
+                  ★★★★★
+                </div>
+                <small>مراجعة تجريبية — مثال توضيحي</small>
+              </motion.article>
+            ))}
+          </div>
+          <p className="footnote">النصوص أعلاه تجريبية وليست تقييمات حقيقية من عملاء.</p>
+        </section>
+
+        {/* ---------------- CONTACT ---------------- */}
+        <section id="contact" className="contact" data-dark>
+          <Marquee reverse className="marquee-ghost" items={["دعوا الورد يتكلم", <em key="x">Let the flowers speak</em>, "دعوا الورد يتكلم", <em key="y">Let the flowers speak</em>]} />
+          <div className="contact-inner">
+            <span className="kicker light">
+              <i /> لديكم حكاية؟
+            </span>
+            <h2>
+              <Reveal>دعوا الورد يقول</Reveal>
+              <Reveal delay={0.1}>
+                <em>ما تعجز عنه الكلمات.</em>
+              </Reveal>
+            </h2>
+            <p>نحن هنا لنختار معكم باقة تليق بكل ما تريدون قوله.</p>
+            <Magnetic strength={0.5}>
+              <a className="orb" href={waLink("مرحبًا بيتـاليا، أود الاستفسار عن تنسيق باقة لمناسبة خاصة.")} target="_blank" rel="noreferrer">
+                <span>ابدأوا حكايتكم</span>
+                <ArrowUpLeft size={22} />
+              </a>
+            </Magnetic>
+          </div>
+        </section>
+      </main>
+
+      {/* ---------------- FOOTER ---------------- */}
+      <footer className="footer" data-dark>
+        <div className="footer-main">
+          <div className="footer-brand">
+            <a className="brand" href="#home">
+              <span className="brand-mark">
+                <Flower2 size={18} strokeWidth={1.3} />
+              </span>
+              <span className="brand-word">
+                PETALIA<small>بيتـاليا للزهور</small>
+              </span>
+            </a>
+            <p>كل زهرة تحكي حكاية</p>
+            <span className="footer-en">Flowers, thoughtfully told.</span>
+          </div>
+          <div className="footer-col">
+            <h3>اكتشفوا</h3>
+            {nav.slice(0, 4).map(n => (
+              <a key={n.href} href={n.href}>
+                {n.text}
+              </a>
+            ))}
+          </div>
+          <div className="footer-col">
+            <h3>اختاروا حسب الشعور</h3>
+            <a href="#products">الورود الحمراء</a>
+            <a href="#products">تنسيقات التوليب</a>
+            <a href="#products">بوكسات الورد</a>
+            <a href="#custom">صمّموا باقتكم</a>
+          </div>
+          <div className="footer-col">
+            <h3>يسعدنا تواصلكم</h3>
+            <span>الرياض، المملكة العربية السعودية</span>
+            <span>رقم التواصل: placeholder قابل للتعديل</span>
+            <a className="footer-wa" href={waLink("مرحبًا بيتـاليا، أود التواصل معكم.")} target="_blank" rel="noreferrer">
+              تواصلوا عبر واتساب <ArrowUpLeft size={15} />
+            </a>
+            <div className="socials">
+              <a href="#contact" aria-label="انستغرام (رابط تجريبي)">Instagram ↗</a>
+              <a href="#contact" aria-label="بنترست (رابط تجريبي)">Pinterest ↗</a>
+            </div>
+          </div>
+        </div>
+        <div className="footer-giant" aria-hidden>
+          PETALIA
+        </div>
+        <div className="footer-bottom">
+          <span>© PETALIA — بيتـاليا للزهور</span>
+          <span>صُنع بعناية، ليُهدى بحب</span>
+          <a href="#home">
+            العودة إلى الأعلى <ArrowUpLeft size={13} />
+          </a>
+        </div>
+      </footer>
+
+      <a className="wa-float" href={waLink("مرحبًا بيتـاليا، أود الاستفسار عن باقات الورد.")} target="_blank" rel="noreferrer" aria-label="تواصل عبر واتساب">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden>
+          <path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.4-.2Z" />
+        </svg>
+        <span>نحن هنا</span>
+      </a>
+
+      <ProductModal product={product} onClose={closeProduct} />
+      <Lightbox src={lightbox} onClose={closeLightbox} />
+      <span className="sr-only" aria-live="polite">
+        {favorites.length ? `في المفضلة: ${favorites.length}` : ""}
+      </span>
+    </div>
+  );
 }
