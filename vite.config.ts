@@ -168,7 +168,21 @@ function vitePluginPublicPlatformConfig(): Plugin {
   };
 }
 
-const plugins = [vitePluginPublicPlatformConfig(), react(), tailwindcss(), jsxLocPlugin(), vitePluginManusDebugCollector()];
+// jsx-loc injects a `data-loc` prop into every JSX element. React Three Fiber
+// treats unknown props as Three.js object paths and crashes on it, so the 3D
+// scene files are skipped.
+function jsxLocPluginSafe(): Plugin {
+  const base = jsxLocPlugin() as Plugin & { transform: (this: unknown, code: string, id: string) => unknown };
+  return {
+    ...base,
+    transform(code, id) {
+      if (id.includes("/petalia/three/")) return null;
+      return base.transform.call(this, code, id) as ReturnType<NonNullable<Plugin["transform"]> & ((...a: any[]) => any)>;
+    },
+  };
+}
+
+const plugins = [vitePluginPublicPlatformConfig(), react(), tailwindcss(), jsxLocPluginSafe(), vitePluginManusDebugCollector()];
 
 export default defineConfig({
   plugins,
