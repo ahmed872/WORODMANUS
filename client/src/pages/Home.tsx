@@ -3,7 +3,7 @@ import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } fr
 import { ArrowLeft, ArrowUpLeft, Check, Flower2, Heart, Menu, MousePointer2, Plus, Sparkles, X, ArrowRight } from "lucide-react";
 import { categories, colorOptions, previewImage, flowerOptions, gallery, IMG, occasions, productFilters, products, sizeOptions, waLink, wrapOptions, type Category, type FlowerKind, type Product } from "@/petalia/data";
 import Loader from "@/petalia/Loader";
-import { Cursor, Magnetic, Marquee, Reveal, RingGallery, ScrollProgress, ScrollWords, scrollLock, Tilt, useSmoothScroll } from "@/petalia/ui";
+import { Marquee, Reveal, ScrollProgress, ScrollWords, scrollLock, useSmoothScroll } from "@/petalia/ui";
 
 const HeroCanvas = lazy(() => import("@/petalia/three/HeroCanvas"));
 
@@ -94,7 +94,7 @@ function Occasions() {
         className="occ-track"
         ref={track}
         onScroll={update}
-        data-cursor="اسحب"
+       
         onPointerDown={e => {
           if (e.pointerType !== "mouse") return;
           drag.current = { down: true, x: e.clientX, left: track.current!.scrollLeft, moved: 0 };
@@ -217,9 +217,9 @@ function Builder() {
           <motion.div className="stage-size" animate={{ scale: sz.height / 60 }} transition={{ duration: 0.8, ease: EASE }}>
             <AnimatePresence mode="popLayout" initial={false}>
               <motion.div key={preview} className="stage-photo-wrap" initial={{ opacity: 0, rotateY: -30, x: 60 }} animate={{ opacity: 1, rotateY: 0, x: 0 }} exit={{ opacity: 0, rotateY: 30, x: -60 }} transition={{ duration: 0.75, ease: EASE }}>
-                <Tilt className="stage-photo" max={7} style={{ ["--wrap" as string]: wrapOptions[wrap].color }}>
+                <div className="stage-photo" style={{ ["--wrap" as string]: wrapOptions[wrap].color }}>
                   <img src={preview} alt={`مثال حقيقي: ${flowerOpt.label}`} />
-                </Tilt>
+                </div>
               </motion.div>
             </AnimatePresence>
           </motion.div>
@@ -357,11 +357,9 @@ function Builder() {
             </strong>
             <span className="demo">سعر توضيحي — يُحدَّد نهائيًا عند التواصل</span>
           </div>
-          <Magnetic>
             <a className="btn btn-primary" href={waLink(message)} target="_blank" rel="noreferrer">
               أرسل اختياراتك عبر واتساب <ArrowUpLeft size={17} />
             </a>
-          </Magnetic>
         </div>
       </div>
     </section>
@@ -429,7 +427,6 @@ export default function Home() {
   const reduce = !!useReducedMotion();
   const [loading, setLoading] = useState(true);
   const [onDark, setOnDark] = useState(true);
-  const [hidden, setHidden] = useState(false);
   const [menu, setMenu] = useState(false);
   const [filter, setFilter] = useState<Category | "all">("all");
   const [product, setProduct] = useState<Product | null>(null);
@@ -444,17 +441,12 @@ export default function Home() {
   const ready = !loading;
 
   useEffect(() => {
-    let last = 0;
     const onScroll = () => {
-      const y = window.scrollY;
       const darkZones = Array.from(document.querySelectorAll<HTMLElement>("[data-dark]"));
       setOnDark(darkZones.some(el => {
         const r = el.getBoundingClientRect();
-        return r.top <= 40 && r.bottom >= 40;
+        return r.top <= 50 && r.bottom >= 50;
       }));
-      setHidden(y > 600 && y > last + 4);
-      if (y < last - 4) setHidden(false);
-      last = y;
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -477,11 +469,10 @@ export default function Home() {
   return (
     <div className="petalia" dir="rtl">
       <AnimatePresence>{loading && <Loader onDone={done} />}</AnimatePresence>
-      <Cursor />
       <ScrollProgress />
 
       {/* ---------------- NAV ---------------- */}
-      <header className={`nav ${onDark ? "on-dark" : "on-light"} ${hidden && !menu ? "is-hidden" : ""} ${menu ? "menu-open" : ""}`}>
+      <header className={`nav ${onDark ? "on-dark" : "on-light"} ${menu ? "menu-open" : ""}`}>
         <a className="brand" href="#home" onClick={closeMenu} aria-label="PETALIA — الرئيسية">
           <span className="brand-mark">
             <Flower2 size={18} strokeWidth={1.3} />
@@ -498,12 +489,10 @@ export default function Home() {
           ))}
         </nav>
         <div className="nav-end">
-          <Magnetic>
             <a className="nav-cta" href={waLink("مرحبًا بيتـاليا، أود الاستفسار عن تنسيقاتكم.")} target="_blank" rel="noreferrer">
               <span>لنتحدث عن الورد</span>
               <ArrowUpLeft size={16} />
             </a>
-          </Magnetic>
           <button className="burger" aria-label={menu ? "إغلاق القائمة" : "فتح القائمة"} aria-expanded={menu} onClick={() => setMenu(m => !m)}>
             {menu ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -554,16 +543,12 @@ export default function Home() {
               نختار أجمل الزهور وننسّقها بعناية، لتصل مشاعركم بأجمل صورة.
             </motion.p>
             <motion.div className="hero-actions" initial={{ opacity: 0, y: 16 }} animate={ready ? { opacity: 1, y: 0 } : undefined} transition={{ delay: 1.1, duration: 0.9 }}>
-              <Magnetic>
                 <a className="btn btn-light" href="#products">
                   اكتشف مجموعتنا <ArrowLeft size={17} />
                 </a>
-              </Magnetic>
-              <Magnetic>
                 <a className="btn btn-ghost" href="#custom">
                   <Sparkles size={16} /> صمّم باقتك الخاصة
                 </a>
-              </Magnetic>
             </motion.div>
             <motion.div className="hero-stats" initial={{ opacity: 0 }} animate={ready ? { opacity: 1 } : undefined} transition={{ delay: 1.3, duration: 1 }}>
               <div>
@@ -606,8 +591,8 @@ export default function Home() {
           </div>
           <div className="coll-grid">
             {categories.map((c, i) => (
-              <motion.a href="#products" key={c.title} className={`coll-tile t${i + 1}`} initial={{ opacity: 0, y: 60 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }} transition={{ duration: 1, ease: EASE, delay: (i % 3) * 0.08 }} data-cursor="اكتشف">
-                <Tilt className="coll-tilt" max={8}>
+              <motion.a href="#products" key={c.title} className={`coll-tile t${i + 1}`} initial={{ opacity: 0, y: 60 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }} transition={{ duration: 1, ease: EASE, delay: (i % 3) * 0.08 }}>
+                <div className="coll-tilt">
                   <img src={c.image} alt={c.title} loading="lazy" />
                   <span className="coll-idx">{String(i + 1).padStart(2, "0")}</span>
                   <div className="coll-label">
@@ -617,7 +602,7 @@ export default function Home() {
                   <span className="coll-arrow">
                     <ArrowUpLeft size={18} />
                   </span>
-                </Tilt>
+                </div>
               </motion.a>
             ))}
           </div>
@@ -640,15 +625,15 @@ export default function Home() {
             <AnimatePresence mode="popLayout">
               {shown.map((p, i) => (
                 <motion.article layout key={p.name} className="pcard" initial={{ opacity: 0, y: 40, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }} transition={{ duration: 0.7, ease: EASE, delay: i * 0.04 }}>
-                  <Tilt className="pcard-media" max={7}>
-                    <button className="pcard-open" onClick={() => setProduct(p)} aria-label={`تفاصيل ${p.name}`} data-cursor="عرض">
+                  <div className="pcard-media">
+                    <button className="pcard-open" onClick={() => setProduct(p)} aria-label={`تفاصيل ${p.name}`}>
                       <motion.img layoutId={`img-${p.name}`} src={p.image} alt={p.name} loading="lazy" />
                     </button>
                     <span className="pcard-tag">{p.tag}</span>
                     <button className={`fav ${favorites.includes(p.name) ? "on" : ""}`} aria-label={favorites.includes(p.name) ? "إزالة من المفضلة" : "إضافة إلى المفضلة"} aria-pressed={favorites.includes(p.name)} onClick={() => toggleFav(p.name)}>
                       <Heart size={17} fill={favorites.includes(p.name) ? "currentColor" : "none"} />
                     </button>
-                  </Tilt>
+                  </div>
                   <div className="pcard-info">
                     <span className="pcard-en">{p.en}</span>
                     <div className="pcard-row">
@@ -725,9 +710,18 @@ export default function Home() {
         <section className="gallery" data-dark>
           <div className="gallery-head pad-x">
             <SectionHead light kicker="من عالم PETALIA / 06" title={<>تفاصيل <em>تزهر</em></>} en="A little world in bloom" />
-            <p>اسحبوا الحلقة لتدويرها، واضغطوا على أي صورة لتكبيرها.</p>
+            <p>اضغطوا على أي صورة لتكبيرها.</p>
           </div>
-          <RingGallery items={gallery} onOpen={setLightbox} />
+          <div className="gallery-grid pad-x">
+            {gallery.map((g, i) => (
+              <motion.button key={g.src} className={`gallery-item g${i + 1}`} onClick={() => setLightbox(g.src)} aria-label={`تكبير: ${g.alt}`} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-40px" }} transition={{ duration: 0.8, ease: EASE, delay: (i % 4) * 0.06 }}>
+                <img src={g.src} alt={g.alt} loading="lazy" />
+                <span>
+                  <Plus size={18} />
+                </span>
+              </motion.button>
+            ))}
+          </div>
           <div className="gallery-foot pad-x">
             <span>@PETALIA.FLOWERS</span>
             <span>لحظاتكم، كما ترونها</span>
@@ -770,12 +764,10 @@ export default function Home() {
               </Reveal>
             </h2>
             <p>نحن هنا لنختار معكم باقة تليق بكل ما تريدون قوله.</p>
-            <Magnetic strength={0.5}>
               <a className="orb" href={waLink("مرحبًا بيتـاليا، أود الاستفسار عن تنسيق باقة لمناسبة خاصة.")} target="_blank" rel="noreferrer">
                 <span>ابدأوا حكايتكم</span>
                 <ArrowUpLeft size={22} />
               </a>
-            </Magnetic>
           </div>
         </section>
       </main>
