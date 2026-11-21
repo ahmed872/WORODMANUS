@@ -76,11 +76,11 @@ export const gallery = [
 
 /* ---------- Bouquet builder ---------- */
 export type FlowerKind = "rose" | "peony" | "tulip" | "mixed";
-export const flowerOptions: { key: FlowerKind; label: string; en: string }[] = [
-  { key: "rose", label: "ورود طبيعية", en: "Roses" },
-  { key: "peony", label: "فاوانيا", en: "Peonies" },
-  { key: "tulip", label: "توليب", en: "Tulips" },
-  { key: "mixed", label: "مزيج موسمي", en: "Seasonal mix" },
+export const flowerOptions: { key: FlowerKind; label: string; en: string; thumb: string; note: string }[] = [
+  { key: "rose", label: "ورود طبيعية", en: "Roses", thumb: IMG.redBouquet, note: "كلاسيكية ورومانسية" },
+  { key: "peony", label: "فاوانيا", en: "Peonies", thumb: IMG.peonyTall, note: "ممتلئة وناعمة" },
+  { key: "tulip", label: "توليب", en: "Tulips", thumb: IMG.tulips, note: "بسيطة وأنيقة" },
+  { key: "mixed", label: "مزيج موسمي", en: "Seasonal mix", thumb: IMG.redEditorial, note: "أزهار الموسم معًا" },
 ];
 
 export const colorOptions = [
@@ -91,9 +91,9 @@ export const colorOptions = [
 ] as const;
 
 export const sizeOptions = [
-  { key: "s", label: "صغير", count: 7, price: 260 },
-  { key: "m", label: "متوسط", count: 13, price: 420 },
-  { key: "l", label: "كبير", count: 21, price: 640 },
+  { key: "s", label: "صغير", count: 7, height: 35, price: 260, note: "لفتة رقيقة" },
+  { key: "m", label: "متوسط", count: 13, height: 45, price: 420, note: "الأكثر اختيارًا" },
+  { key: "l", label: "كبير", count: 21, height: 60, price: 640, note: "حضور فاخر" },
 ] as const;
 
 export const wrapOptions = [
@@ -103,11 +103,11 @@ export const wrapOptions = [
   { key: "noir", label: "أسود ملكي", color: "#1f1a1c" },
 ] as const;
 
-/** Closest real arrangement photo for a builder choice. */
-const previewMap: Record<FlowerKind, Record<string, string>> = {
-  rose: { blush: IMG.roseBox, red: IMG.redBouquet, ivory: IMG.white, spring: IMG.redEditorial },
-  peony: { blush: IMG.peonyTall, red: IMG.peonyTall, ivory: IMG.peonyPink, spring: IMG.roseBox },
-  tulip: { blush: IMG.tulips, red: IMG.tulips, ivory: IMG.tulips, spring: IMG.tulips },
-  mixed: { blush: IMG.roseBox, red: IMG.redEditorial, ivory: IMG.white, spring: IMG.redEditorial },
+/** Closest real arrangement photo for a builder choice (falls back to the flower's own photo). */
+const previewMap: Record<FlowerKind, Partial<Record<string, string>>> = {
+  rose: { red: IMG.redBouquet, blush: IMG.roseBox, ivory: IMG.white, spring: IMG.tulips },
+  peony: { ivory: IMG.peonyPink },
+  tulip: {},
+  mixed: { red: IMG.redEditorial, ivory: IMG.white, blush: IMG.roseBox, spring: IMG.roseBox },
 };
-export const previewImage = (flower: FlowerKind, color: string) => previewMap[flower][color];
+export const previewImage = (flower: FlowerKind, color: string) => previewMap[flower][color] ?? flowerOptions.find(f => f.key === flower)!.thumb;

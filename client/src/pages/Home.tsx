@@ -1,6 +1,6 @@
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
-import { ArrowLeft, ArrowUpLeft, Check, Flower2, Heart, Menu, MousePointer2, Plus, RotateCw, Sparkles, X } from "lucide-react";
+import { ArrowLeft, ArrowUpLeft, Check, Flower2, Heart, Menu, MousePointer2, Plus, Sparkles, X, ArrowRight } from "lucide-react";
 import { categories, colorOptions, previewImage, flowerOptions, gallery, IMG, occasions, productFilters, products, sizeOptions, waLink, wrapOptions, type Category, type FlowerKind, type Product } from "@/petalia/data";
 import Loader from "@/petalia/Loader";
 import { Cursor, Magnetic, Marquee, Reveal, RingGallery, ScrollProgress, ScrollWords, scrollLock, Tilt, useSmoothScroll } from "@/petalia/ui";
@@ -16,17 +16,6 @@ const nav = [
   { text: "صمّم باقتك", href: "#custom" },
   { text: "قصتنا", href: "#story" },
 ];
-
-function useMedia(query: string) {
-  const [match, setMatch] = useState(() => typeof window !== "undefined" && window.matchMedia(query).matches);
-  useEffect(() => {
-    const m = window.matchMedia(query);
-    const on = () => setMatch(m.matches);
-    m.addEventListener("change", on);
-    return () => m.removeEventListener("change", on);
-  }, [query]);
-  return match;
-}
 
 function useEscape(active: boolean, close: () => void) {
   useEffect(() => {
@@ -56,57 +45,103 @@ function SectionHead({ kicker, title, en, light }: { kicker: string; title: Reac
 }
 
 /* ------------------------------------------------------------------ */
-function Occasions({ horizontal }: { horizontal: boolean }) {
-  const section = useRef<HTMLElement>(null);
+function Occasions() {
   const track = useRef<HTMLDivElement>(null);
-  const [distance, setDistance] = useState(0);
-  useLayoutEffect(() => {
-    if (!horizontal) return;
-    const measure = () => track.current && setDistance(Math.max(0, track.current.scrollWidth - window.innerWidth));
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, [horizontal]);
-  const { scrollYProgress } = useScroll({ target: section, offset: ["start start", "end end"] });
-  const x = useTransform(scrollYProgress, [0, 1], [0, distance]);
-  const bar = useTransform(scrollYProgress, [0, 1], [0, 1]);
+  const [progress, setProgress] = useState(0);
+  const [edges, setEdges] = useState({ start: true, end: false });
+  const drag = useRef({ down: false, x: 0, left: 0, moved: 0 });
 
-  const cards = occasions.map((o, i) => (
-    <a className="occ-card" href="#custom" key={o.title} data-cursor="صمّم">
-      <div className="occ-img">
-        <img src={o.image} alt={o.title} loading="lazy" />
-      </div>
-      <span className="occ-num">{String(i + 1).padStart(2, "0")}</span>
-      <div className="occ-copy">
-        <small>{o.en}</small>
-        <h3>{o.title}</h3>
-        <p>{o.line}</p>
-        <span className="occ-cta">
-          اصنعوا باقتها <ArrowUpLeft size={15} />
-        </span>
-      </div>
-    </a>
-  ));
+  const update = useCallback(() => {
+    const el = track.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    const pos = Math.abs(el.scrollLeft); // RTL scrollLeft is negative in modern browsers
+    setProgress(max > 0 ? pos / max : 0);
+    setEdges({ start: pos < 4, end: pos > max - 4 });
+  }, []);
+  useEffect(() => {
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [update]);
+
+  const step = (dir: 1 | -1) => {
+    const el = track.current;
+    if (!el) return;
+    const card = el.querySelector<HTMLElement>(".occ-card");
+    const w = (card?.offsetWidth ?? 360) + 26;
+    // in RTL "next" moves toward negative scrollLeft
+    el.scrollBy({ left: -dir * w, behavior: "smooth" });
+  };
 
   return (
-    <section id="occasions" ref={section} className={`occasions ${horizontal ? "is-pinned" : ""}`} style={horizontal ? { height: `calc(100vh + ${distance}px)` } : undefined}>
-      <div className="occ-sticky">
-        <div className="occ-head">
-          <SectionHead kicker="لحظات تستحق / 03" title={<>لكل مناسبة... <em>حكاية من الورد</em></>} en="Flowers for your moments" />
-          <p>هدية صغيرة، ذكرى تبقى طويلًا. مرّروا لاكتشاف المناسبات.</p>
-        </div>
-        {horizontal ? (
-          <motion.div className="occ-track" ref={track} style={{ x }}>
-            {cards}
-          </motion.div>
-        ) : (
-          <div className="occ-track swipe">{cards}</div>
-        )}
-        {horizontal && (
-          <div className="occ-progress">
-            <motion.i style={{ scaleX: bar }} />
+    <section id="occasions" className="occasions">
+      <div className="occ-head">
+        <SectionHead kicker="لحظات تستحق / 03" title={<>لكل مناسبة... <em>حكاية من الورد</em></>} en="Flowers for your moments" />
+        <div className="occ-nav">
+          <p>هدية صغيرة، ذكرى تبقى طويلًا.</p>
+          <div>
+            <button onClick={() => step(-1)} disabled={edges.start} aria-label="السابق">
+              <ArrowRight size={18} />
+            </button>
+            <button onClick={() => step(1)} disabled={edges.end} aria-label="التالي">
+              <ArrowLeft size={18} />
+            </button>
           </div>
-        )}
+        </div>
+      </div>
+      <div
+        className="occ-track"
+        ref={track}
+        onScroll={update}
+        data-cursor="اسحب"
+        onPointerDown={e => {
+          if (e.pointerType !== "mouse") return;
+          drag.current = { down: true, x: e.clientX, left: track.current!.scrollLeft, moved: 0 };
+        }}
+        onPointerMove={e => {
+          const d = drag.current;
+          if (!d.down) return;
+          const dx = e.clientX - d.x;
+          d.moved = Math.max(d.moved, Math.abs(dx));
+          if (d.moved > 4) track.current!.classList.add("dragging");
+          track.current!.scrollLeft = d.left - dx;
+        }}
+        onPointerUp={() => {
+          drag.current.down = false;
+          track.current?.classList.remove("dragging");
+        }}
+        onPointerLeave={() => {
+          drag.current.down = false;
+          track.current?.classList.remove("dragging");
+        }}
+        onClickCapture={e => {
+          if (drag.current.moved > 6) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          drag.current.moved = 0;
+        }}
+      >
+        {occasions.map((o, i) => (
+          <a className="occ-card" href="#custom" key={o.title} draggable={false}>
+            <div className="occ-img">
+              <img src={o.image} alt={o.title} loading="lazy" draggable={false} />
+            </div>
+            <span className="occ-num">{String(i + 1).padStart(2, "0")}</span>
+            <div className="occ-copy">
+              <small>{o.en}</small>
+              <h3>{o.title}</h3>
+              <p>{o.line}</p>
+              <span className="occ-cta">
+                اصنعوا باقتها <ArrowUpLeft size={15} />
+              </span>
+            </div>
+          </a>
+        ))}
+      </div>
+      <div className="occ-progress">
+        <i style={{ transform: `scaleX(${Math.max(0.08, progress)})` }} />
       </div>
     </section>
   );
@@ -146,6 +181,12 @@ function Campaign() {
 }
 
 /* ------------------------------------------------------------------ */
+const BLOOMS: [number, number][][] = [
+  [[23, 26], [37, 26], [30, 16]],
+  [[17, 28], [43, 28], [30, 28], [23, 17], [37, 17]],
+  [[12, 30], [48, 30], [24, 30], [36, 30], [18, 19], [42, 19], [30, 12]],
+];
+
 function Builder() {
   const [flower, setFlower] = useState<FlowerKind>("rose");
   const [color, setColor] = useState(0);
@@ -153,6 +194,8 @@ function Builder() {
   const [wrap, setWrap] = useState(0);
   const [card, setCard] = useState("");
   const preview = previewImage(flower, colorOptions[color].key);
+  const flowerOpt = flowerOptions.find(f => f.key === flower)!;
+  const sz = sizeOptions[size];
   const price = sizeOptions[size].price + (flower === "peony" ? 90 : flower === "mixed" ? 45 : 0) + (wrap === 3 ? 35 : 0);
   const message = `مرحبًا بيتـاليا، أود تصميم باقة خاصة:\nالزهور: ${flowerOptions.find(f => f.key === flower)!.label}\nالألوان: ${colorOptions[color].label}\nالحجم: ${sizeOptions[size].label} (${sizeOptions[size].count} زهرة تقريبًا)\nالتغليف: ${wrapOptions[wrap].label}\nبطاقة الإهداء: ${card || "بدون نص محدد"}\nالتكلفة التقديرية الظاهرة: ${price} ر.س (توضيحية)`;
 
@@ -161,23 +204,55 @@ function Builder() {
       <div className="builder-stage">
         <div className="stage-glow" />
         <div className="stage-scene">
-          <AnimatePresence mode="popLayout">
-            <motion.div key={preview} className="stage-photo-wrap" initial={{ opacity: 0, rotateY: -35, z: -200, x: 80 }} animate={{ opacity: 1, rotateY: 0, z: 0, x: 0 }} exit={{ opacity: 0, rotateY: 35, z: -200, x: -80 }} transition={{ duration: 0.9, ease: EASE }}>
-              <Tilt className="stage-photo" max={9} style={{ ["--wrap" as string]: wrapOptions[wrap].color }}>
-                <motion.img src={preview} alt="مثال حقيقي من تنسيقاتنا قريب من اختياراتك" animate={{ scale: [0.88, 0.95, 1][size] }} transition={{ duration: 0.8, ease: EASE }} />
-              </Tilt>
-            </motion.div>
-          </AnimatePresence>
+          <div className="stage-frame">
+          {/* height ruler: the photo grows with the chosen size */}
+          <div className="stage-ruler" aria-hidden>
+            {sizeOptions.map((o, i) => (
+              <span key={o.key} className={i === size ? "on" : ""} style={{ bottom: `${(o.height / 60) * 100}%` }}>
+                {o.height} سم
+              </span>
+            ))}
+            <motion.i className="ruler-fill" animate={{ height: `${(sz.height / 60) * 100}%` }} transition={{ duration: 0.8, ease: EASE }} />
+          </div>
+          <motion.div className="stage-size" animate={{ scale: sz.height / 60 }} transition={{ duration: 0.8, ease: EASE }}>
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.div key={preview} className="stage-photo-wrap" initial={{ opacity: 0, rotateY: -30, x: 60 }} animate={{ opacity: 1, rotateY: 0, x: 0 }} exit={{ opacity: 0, rotateY: 30, x: -60 }} transition={{ duration: 0.75, ease: EASE }}>
+                <Tilt className="stage-photo" max={7} style={{ ["--wrap" as string]: wrapOptions[wrap].color }}>
+                  <img src={preview} alt={`مثال حقيقي: ${flowerOpt.label}`} />
+                </Tilt>
+              </motion.div>
+            </AnimatePresence>
+          </motion.div>
+          </div>
           <div className="stage-shadow" />
         </div>
-        <div className="stage-hud">
-          <span>
-            <Flower2 size={14} /> {sizeOptions[size].count} زهرة · {wrapOptions[wrap].label}
-          </span>
-          <span className="stage-live">
-            <i /> صورة حقيقية من تنسيقات مشابهة لاختياركم
-          </span>
+        <div className="stage-summary">
+          <div>
+            <small>النوع</small>
+            <strong>{flowerOpt.label}</strong>
+          </div>
+          <div>
+            <small>الألوان</small>
+            <span className="swatches">
+              {colorOptions[color].swatch.slice(0, 3).map(c => (
+                <i key={c} style={{ background: c }} />
+              ))}
+            </span>
+          </div>
+          <div>
+            <small>الحجم</small>
+            <strong>
+              {sz.count} زهرة · {sz.height} سم
+            </strong>
+          </div>
+          <div>
+            <small>التغليف</small>
+            <span className="swatches">
+              <i style={{ background: wrapOptions[wrap].color }} />
+            </span>
+          </div>
         </div>
+        <p className="stage-note">الصورة مثال حقيقي من تنسيقاتنا لنفس نوع الزهور، وتُنسَّق باقتكم بالألوان والحجم الذي اخترتموه.</p>
         {card && (
           <motion.div className="stage-card" initial={{ opacity: 0, y: 12, rotate: -4 }} animate={{ opacity: 1, y: 0, rotate: -3 }}>
             <small>بطاقة الإهداء</small>
@@ -193,11 +268,19 @@ function Builder() {
           <label>
             <b>01</b> نوع الزهور
           </label>
-          <div className="opt-row">
+          <div className="flower-cards">
             {flowerOptions.map(f => (
               <button key={f.key} className={flower === f.key ? "on" : ""} onClick={() => setFlower(f.key)} aria-pressed={flower === f.key}>
-                {f.label}
-                <small>{f.en}</small>
+                <span className="fc-img">
+                  <img src={f.thumb} alt="" loading="lazy" />
+                  {flower === f.key && (
+                    <motion.span className="fc-check" layoutId="fc-check">
+                      <Check size={14} />
+                    </motion.span>
+                  )}
+                </span>
+                <strong>{f.label}</strong>
+                <small>{f.note}</small>
               </button>
             ))}
           </div>
@@ -223,11 +306,20 @@ function Builder() {
           <label>
             <b>03</b> حجم الباقة
           </label>
-          <div className="opt-row sizes">
-            {sizeOptions.map((s, i) => (
-              <button key={s.key} className={size === i ? "on" : ""} onClick={() => setSize(i)} aria-pressed={size === i}>
-                {s.label}
-                <small>{s.count} زهرة</small>
+          <div className="size-cards">
+            {sizeOptions.map((o, i) => (
+              <button key={o.key} className={size === i ? "on" : ""} onClick={() => setSize(i)} aria-pressed={size === i}>
+                <svg viewBox="0 0 60 80" aria-hidden style={{ height: `${44 + i * 16}px` }}>
+                  {BLOOMS[i].map(([cx, cy], k) => (
+                    <circle key={k} cx={cx} cy={cy} r={7.5} />
+                  ))}
+                  <path d="M18 34 L30 76 L42 34 Z" />
+                </svg>
+                <strong>{o.label}</strong>
+                <small>
+                  {o.count} زهرة · ≈{o.height} سم
+                </small>
+                <em>{o.note}</em>
               </button>
             ))}
           </div>
@@ -335,7 +427,6 @@ function Lightbox({ src, onClose }: { src: string | null; onClose: () => void })
 /* ================================================================== */
 export default function Home() {
   const reduce = !!useReducedMotion();
-  const wide = useMedia("(min-width: 900px)");
   const [loading, setLoading] = useState(true);
   const [onDark, setOnDark] = useState(true);
   const [hidden, setHidden] = useState(false);
@@ -585,7 +676,7 @@ export default function Home() {
 
         <Campaign />
 
-        <Occasions horizontal={wide && !reduce} />
+        <Occasions />
 
         <Builder />
 
