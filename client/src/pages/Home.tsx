@@ -1,25 +1,105 @@
-import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
-import { Streamdown } from 'streamdown';
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { ArrowDownLeft, ArrowLeft, ArrowUpLeft, Check, ChevronDown, Flower2, Heart, Menu, Plus, Sparkles, X } from "lucide-react";
 
-/**
- * All content in this page are only for example, replace with your own feature implementation
- * When building pages, remember your instructions in Frontend Workflow, Frontend Best Practices, Design Guide and Common Pitfalls
- */
+type Product = { name: string; en: string; description: string; price: number; image: string; tag: string };
+const WA_NUMBER = "966500000000"; // رقم تجريبي قابل للتعديل قبل الإطلاق
+const waLink = (message: string) => `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(message)}`;
+const products: Product[] = [
+  { name: "باقة عشق", en: "A little love", description: "ورود حمراء منتقاة بتنسيق يفيض بالمشاعر.", price: 420, image: "/images/red-roses-bouquet.png", tag: "الأكثر طلبًا" },
+  { name: "صباح الورد", en: "Morning in bloom", description: "فاوانيا وردية وورود ناعمة لبداية جميلة.", price: 560, image: "/images/peony-pink.jpg", tag: "اختيار المحررة" },
+  { name: "لمسة ربيع", en: "Spring note", description: "توليب موسمي بدرجات فاتحة ومبهجة.", price: 350, image: "/manus-storage/async-images/tJa0DbWfOgobX91v7B3Ze1/image-2.webp", tag: "جديد" },
+  { name: "أبيض نقي", en: "Pure poetry", description: "ورود بيضاء بملامح هادئة وأنيقة.", price: 390, image: "/images/bouquet-white.jpg", tag: "كلاسيكية" },
+  { name: "حكاية ورد", en: "A story in petals", description: "مزيج فاخر من الأزهار بألوان متناغمة.", price: 480, image: "/images/bouquet-red-editorial.jpg", tag: "تنسيق خاص" },
+  { name: "لحظة فرح", en: "A joyful moment", description: "باقة مبهجة لتقول: يومك أجمل.", price: 320, image: "/images/peony-tall.jpg", tag: "للمناسبات" },
+  { name: "صندوق المحبة", en: "The rose box", description: "ورود وردية داخل صندوق أنيق بتفاصيل ناعمة.", price: 620, image: "/manus-storage/async-images/tJa0DbWfOgobX91v7B3Ze1/image-4.webp", tag: "هدية فاخرة" },
+  { name: "وردة العمر", en: "Ever after", description: "تنسيق رومانسي من الورود والفاوانيا.", price: 590, image: "/images/peony-rose-box.webp", tag: "للذكرى" },
+  { name: "سحر الطبيعة", en: "Wildly beautiful", description: "أزهار موسمية بطابع حديقة طبيعية.", price: 440, image: "/images/white-roses-tulips.png", tag: "موسمي" },
+  { name: "أناقة الورد", en: "Quiet elegance", description: "تنسيق زهري يوازن بين الرقة والحضور.", price: 680, image: "/images/red-roses-vase.png", tag: "حصري" },
+];
+const categories = [
+  { title: "باقات الورد الطبيعي", en: "The signature bouquet", image: "/manus-storage/async-images/tJa0DbWfOgobX91v7B3Ze1/image-1.webp", shape: "tall" },
+  { title: "الورود الحمراء", en: "Say it in red", image: "/manus-storage/async-images/tJa0DbWfOgobX91v7B3Ze1/image-5.webp", shape: "wide" },
+  { title: "الورود الوردية", en: "Softly, in pink", image: "/images/peony-pink.jpg", shape: "square" },
+  { title: "تنسيقات التوليب", en: "Tulip season", image: "/manus-storage/async-images/tJa0DbWfOgobX91v7B3Ze1/image-2.webp", shape: "square" },
+  { title: "بوكسات الورد", en: "A gift, beautifully", image: "/manus-storage/async-images/tJa0DbWfOgobX91v7B3Ze1/image-4.webp", shape: "wide" },
+  { title: "تنسيقات المناسبات", en: "For the gathering", image: "/manus-storage/async-images/tJa0DbWfOgobX91v7B3Ze1/image-3.webp", shape: "tall" },
+  { title: "الهدايا والورود", en: "Little gestures", image: "/images/peony-rose-box.webp", shape: "square" },
+  { title: "تنسيقات الزفاف", en: "For your forever", image: "/images/white-roses-tulips.png", shape: "wide" },
+];
+const occasions = [
+  { title: "أعياد الميلاد", image: "/images/peony-tall.jpg" }, { title: "حفلات الزواج", image: "/manus-storage/async-images/tJa0DbWfOgobX91v7B3Ze1/image-3.webp" },
+  { title: "الخطوبة", image: "/manus-storage/async-images/tJa0DbWfOgobX91v7B3Ze1/image-4.webp" }, { title: "التخرج", image: "/images/peony-pink.jpg" },
+  { title: "استقبال المواليد", image: "/images/bouquet-white.jpg" }, { title: "الذكرى السنوية", image: "/manus-storage/async-images/tJa0DbWfOgobX91v7B3Ze1/image-5.webp" },
+  { title: "هدايا رومانسية", image: "/images/red-roses-bouquet.png" }, { title: "مناسبات خاصة", image: "/manus-storage/async-images/tJa0DbWfOgobX91v7B3Ze1/image-2.webp" },
+];
+const flowers = ["ورود طبيعية", "فاوانيا", "توليب", "مزيج موسمي"];
+const colors = ["وردي هادئ", "أحمر عميق", "أبيض عاجي", "ألوان الربيع"];
+const sizes = ["صغير", "متوسط", "كبير"];
+const wraps = ["ورق عاجي", "ورق وردي", "تغليف كتان", "بدون تغليف"];
+const reveal = { hidden: { opacity: 0, y: 24 }, visible: { opacity: 1, y: 0 } };
+
+function SectionHead({ kicker, title, english, light = false }: { kicker: string; title: ReactNode; english?: string; light?: boolean }) {
+  return <div className={`section-head ${light ? "light" : ""}`}><span className="eyebrow">{kicker}</span><h2>{title}</h2>{english && <span className="section-en">{english}</span>}</div>;
+}
+function ImageModal({ image, onClose }: { image: string | null; onClose: () => void }) {
+  useEffect(() => { if (!image) return; const close = (e: KeyboardEvent) => e.key === "Escape" && onClose(); window.addEventListener("keydown", close); document.body.style.overflow = "hidden"; return () => { window.removeEventListener("keydown", close); document.body.style.overflow = ""; }; }, [image, onClose]);
+  return <AnimatePresence>{image && <motion.div className="lightbox" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} role="dialog" aria-modal="true" aria-label="عرض الصورة"><button className="lightbox-close" aria-label="إغلاق" onClick={onClose}><X /></button><motion.img src={image} alt="تنسيق زهري من PETALIA" initial={{ scale: .96 }} animate={{ scale: 1 }} onClick={e => e.stopPropagation()} /></motion.div>}</AnimatePresence>;
+}
+
 export default function Home() {
-  // If theme is switchable in App.tsx, we can implement theme toggling like this:
-  // const { theme, toggleTheme } = useTheme();
+  const reduceMotion = useReducedMotion();
+  const [loaded, setLoaded] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [lightbox, setLightbox] = useState<string | null>(null);
+  const [selected, setSelected] = useState({ flower: flowers[0], color: colors[0], size: sizes[1], wrap: wraps[0], card: "" });
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const motionProps = reduceMotion ? {} : { initial: "hidden", whileInView: "visible", viewport: { once: true, margin: "-80px" }, variants: reveal, transition: { duration: .72, ease: [0.22, 1, 0.36, 1] as const } };
+  useEffect(() => { const timer = window.setTimeout(() => setLoaded(true), 1100); const onScroll = () => setScrolled(window.scrollY > 32); window.addEventListener("scroll", onScroll, { passive: true }); return () => { window.clearTimeout(timer); window.removeEventListener("scroll", onScroll); }; }, []);
+  const bouquetMessage = useMemo(() => `مرحبًا بيتـاليا، أود تصميم باقة خاصة:\nالزهور: ${selected.flower}\nالألوان: ${selected.color}\nالحجم: ${selected.size}\nالتغليف: ${selected.wrap}\nبطاقة الإهداء: ${selected.card || "بدون نص محدد"}`, [selected]);
+  const nav = [{ text: "الرئيسية", href: "#home" }, { text: "باقات الورد", href: "#collections" }, { text: "تنسيقاتنا", href: "#products" }, { text: "مناسباتكم", href: "#occasions" }, { text: "قصتنا", href: "#story" }, { text: "تواصل معنا", href: "#contact" }];
+  const closeMenu = () => setMenuOpen(false);
 
-  return (
-    <div className="min-h-screen flex flex-col">
-      <main>
-        {/* Example: lucide-react for icons */}
-        <Loader2 className="animate-spin" />
-        Example Page
-        {/* Example: Streamdown for markdown rendering */}
-        <Streamdown>Any **markdown** content</Streamdown>
-        <Button variant="default">Example Button</Button>
-      </main>
-    </div>
-  );
+  return <div className="site-shell" dir="rtl">
+    <AnimatePresence>{!loaded && <motion.div className="loader-screen" initial={{ opacity: 1 }} exit={{ opacity: 0, y: -12, transition: { duration: .55 } }}><div className="loader-flower"><span /><span /><span /><span /><span /><i /></div><div className="loader-wordmark">PETALIA</div><p>نُحضّر لك تجربة مليئة بالجمال...</p><div className="loader-line"><i /></div></motion.div>}</AnimatePresence>
+    <div className="topline"><span>تفاصيل صغيرة، مشاعر كبيرة</span><span>تنسيق يليق بلحظاتكم</span></div>
+    <header className={`navbar ${scrolled ? "compact" : ""}`}>
+      <button className="mobile-toggle" aria-label={menuOpen ? "إغلاق القائمة" : "فتح القائمة"} onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X /> : <Menu />}</button>
+      <a className="wordmark" href="#home" onClick={closeMenu}><span className="wordmark-flower"><Flower2 size={19} strokeWidth={1.3} /></span><span>PETALIA<small>بيتـاليا للزهور</small></span></a>
+      <nav className={menuOpen ? "nav-links open" : "nav-links"} aria-label="القائمة الرئيسية">{nav.map(item => <a key={item.href} href={item.href} onClick={closeMenu}>{item.text}</a>)}</nav>
+      <div className="nav-actions"><a href={waLink("مرحبًا بيتـاليا، أود الاستفسار عن تنسيقاتكم.")} className="nav-contact"><span>لنتحدث عن الورد</span><ArrowUpLeft size={16} /></a></div>
+    </header>
+    <main>
+      <section id="home" className="hero">
+        <div className="hero-copy"><span className="eyebrow hero-eyebrow"><i /> استوديو زهور، بتفاصيل من القلب</span><h1>بعض المشاعر...<br /><em>لا تُقال بالكلمات</em></h1><p>نختار أجمل الزهور وننسّقها بعناية،<br className="desktop-only" /> لتصل مشاعركم بأجمل صورة.</p><div className="hero-actions"><a className="button button-dark" href="#products">اكتشف مجموعتنا <ArrowLeft size={16} /></a><a className="button button-outline" href="#custom">صمّم باقتك الخاصة <Sparkles size={16} /></a></div><div className="hero-note"><span className="note-rule" /> <span>كل باقة تبدأ بحكاية</span><span className="note-en">A little something, thoughtfully made</span></div></div>
+        <div className="hero-visual"><div className="hero-photo"><img src="/manus-storage/async-images/tJa0DbWfOgobX91v7B3Ze1/image-1.webp" alt="تنسيق فاخر من الورود والفاوانيا الوردية" fetchPriority="high" /><div className="photo-grain" /></div><div className="hero-caption"><span>01 / 04</span><span>مختارة بعناية، لتُهدى بحب</span></div><div className="hero-stamp"><Flower2 size={20} /><span>أزهار<br />تُحكى</span></div><div className="hero-vertical">PETALIA FLORAL STUDIO · RIYADH</div></div>
+        <div className="hero-bottom"><a href="#collections"><ArrowDownLeft size={15} /> اكتشف الحكاية</a><span>زهور مختارة · تنسيق يدوي · هدايا من القلب</span></div>
+      </section>
+
+      <section id="collections" className="collections section-pad"><div className="collection-intro"><SectionHead kicker="مجموعاتنا / 01" title={<>اختيرت بحب...<br />وصُممت لتُهدى</>} english="A collection made to be remembered" /><p>لكل لحظة لونها، ولكل شعور زهرة تشبهه. اكتشفوا مجموعاتنا المختارة بعناية.</p><a href="#products" className="text-link">تصفّح كل الباقات <ArrowLeft size={15} /></a><span className="intro-flower"><Flower2 size={90} strokeWidth={.6} /></span></div><div className="category-grid">{categories.map((cat, i) => <a href="#products" key={cat.title} className={`category-tile ${cat.shape}`}><img src={cat.image} alt={cat.title} loading="lazy" /><span className="cat-index">0{i + 1}</span><div className="category-label"><small>{cat.en}</small><strong>{cat.title}</strong><span className="cat-arrow"><ArrowUpLeft size={17} /></span></div></a>)}</div></section>
+
+      <section id="products" className="products section-pad"><div className="products-head"><SectionHead kicker="تشكيلة PETALIA / 02" title="وردٌ يليق بالحكاية" english="The flower edit" /><a className="text-link" href={waLink("مرحبًا بيتـاليا، أود رؤية المجموعة الكاملة من الباقات.")}>اطلبوا المجموعة الكاملة <ArrowLeft size={15} /></a></div><div className="product-grid">{products.map((item, i) => <motion.article className="product-card" key={item.name} {...motionProps}><div className="product-image" onClick={() => setProduct(item)} role="button" tabIndex={0} onKeyDown={e => e.key === "Enter" && setProduct(item)}><img src={item.image} alt={item.name} loading="lazy" /><span className="product-tag">{item.tag}</span><button className={`favorite ${favorites.includes(item.name) ? "active" : ""}`} aria-label="إضافة إلى المفضلة" onClick={e => { e.stopPropagation(); setFavorites(favorites.includes(item.name) ? favorites.filter(x => x !== item.name) : [...favorites, item.name]); }}><Heart size={17} fill={favorites.includes(item.name) ? "currentColor" : "none"} /></button><span className="quick-view">اكتشف الباقة <ArrowUpLeft size={15} /></span></div><div className="product-info"><span className="product-en">{item.en}</span><div className="product-title-row"><div><h3>{item.name}</h3><p>{item.description}</p></div><span className="price">{item.price} <small>ر.س</small></span></div><div className="product-footer"><button onClick={() => setProduct(item)}>التفاصيل <Plus size={14} /></button><a href={waLink(`مرحبًا بيتـاليا، أود طلب ${item.name} — السعر الظاهر ${item.price} ر.س توضيحي.`)} target="_blank" rel="noreferrer">اطلب عبر واتساب <ArrowUpLeft size={14} /></a></div><small className="demo-price">السعر المعروض للتوضيح فقط</small></div></motion.article>)}</div><div className="products-footnote">جميع الأسعار المعروضة تجريبية للتوضيح، وتُحدّد التفاصيل عند التواصل.</div></section>
+
+      <section className="campaign"><div className="campaign-image"><img src="/images/peony-rose-box.webp" alt="تفاصيل بتلات وتنسيق زهور فاخر" loading="lazy" /><span className="campaign-vertical">THE ART OF GIVING</span></div><div className="campaign-copy"><span className="eyebrow">تنسيق، بإحساس مختلف</span><h2>الجمال يكمن<br /><em>في التفاصيل</em></h2><p>من أول بتلة نختارها، إلى آخر لمسة على بطاقة الإهداء. نؤمن أن أجمل الهدايا هي التي تُشبه من نهديها.</p><a className="text-link" href="#story">تعرّف على أسلوبنا <ArrowLeft size={15} /></a><span className="campaign-script">made with feeling</span></div></section>
+
+      <section id="occasions" className="occasions section-pad"><div className="occasion-heading"><SectionHead kicker="لحظات تستحق / 03" title="لكل مناسبة... حكاية من الورد" english="Flowers for your moments" /><p>هدية صغيرة، ذكرى تبقى طويلة.</p></div><div className="occasion-grid">{occasions.map((item, i) => <a className="occasion-item" href="#custom" key={item.title}><img src={item.image} alt={item.title} loading="lazy" /><span className="occasion-number">0{i + 1}</span><span className="occasion-name">{item.title}<ArrowUpLeft size={15} /></span></a>)}</div></section>
+
+      <section id="custom" className="custom section-pad"><div className="custom-visual"><div className="custom-image"><img src="/manus-storage/async-images/tJa0DbWfOgobX91v7B3Ze1/image-1.webp" alt="زهور مختارة لصنع باقة خاصة" loading="lazy" /><div className="custom-seal"><Flower2 /><span>اختيارك<br />حكايتك</span></div></div><span className="custom-side-note">A bouquet, your way</span></div><div className="custom-form"><SectionHead kicker="مساحتك الإبداعية / 04" title={<>اصنع باقتك<br /><em>الخاصة</em></>} english="Made just for you" /><p className="custom-intro">اختاروا التفاصيل التي تحبونها، ونحن ننسّقها لتُصبح باقة تشبهكم.</p><div className="choice-group"><label>01 <span>نوع الزهور</span></label><div className="choice-options">{flowers.map(x => <button key={x} className={selected.flower === x ? "chosen" : ""} onClick={() => setSelected({ ...selected, flower: x })}>{x}</button>)}</div></div><div className="choice-group"><label>02 <span>الألوان</span></label><div className="choice-options">{colors.map((x, i) => <button key={x} className={selected.color === x ? "chosen" : ""} onClick={() => setSelected({ ...selected, color: x })}><i className={`swatch swatch-${i}`} />{x}</button>)}</div></div><div className="choice-group"><label>03 <span>حجم الباقة</span></label><div className="choice-options">{sizes.map(x => <button key={x} className={selected.size === x ? "chosen" : ""} onClick={() => setSelected({ ...selected, size: x })}>{x}</button>)}</div></div><div className="choice-group"><label>04 <span>نوع التغليف</span></label><div className="choice-options">{wraps.map(x => <button key={x} className={selected.wrap === x ? "chosen" : ""} onClick={() => setSelected({ ...selected, wrap: x })}>{x}</button>)}</div></div><label className="card-label" htmlFor="gift-card">05 <span>بطاقة الإهداء</span></label><textarea id="gift-card" value={selected.card} maxLength={120} onChange={e => setSelected({ ...selected, card: e.target.value })} placeholder="اكتبوا كلماتكم هنا..." /><a className="button button-dark custom-submit" href={waLink(bouquetMessage)} target="_blank" rel="noreferrer">أرسل اختياراتك عبر واتساب <ArrowUpLeft size={16} /></a><small className="placeholder-note">رقم التواصل الحالي تجريبي وقابل للتعديل.</small></div></section>
+
+      <section id="story" className="story section-pad"><div className="story-image"><img src="/manus-storage/async-images/tJa0DbWfOgobX91v7B3Ze1/image-1.webp" alt="أزهار PETALIA المختارة بعناية" loading="lazy" /><span>FLORAL NOTES · VOL. 01</span></div><div className="story-copy"><span className="eyebrow">حكايتنا / 05</span><h2>نؤمن أن لكل<br /><em>زهرة لغة</em></h2><p>بعض الكلمات لا تحتاج إلى صوت. نختار الزهور كما تُختار الكلمات الجميلة؛ بقلبٍ حاضر، واهتمام بالتفاصيل، ورغبة في أن تصل مشاعركم كما هي.</p><p>في PETALIA، كل تنسيق مساحة صغيرة للتعبير، وكل باقة بداية لحكاية تُهدى.</p><span className="story-sign">بكل حب، PETALIA <Flower2 size={18} /></span></div></section>
+
+      <section className="gallery section-pad"><div className="gallery-top"><SectionHead kicker="من عالم PETALIA / 06" title="تفاصيل تزهر" english="A little world in bloom" /><a href="#contact" className="text-link">شاركونا لحظاتكم <ArrowLeft size={15} /></a></div><div className="gallery-grid">{["/manus-storage/async-images/tJa0DbWfOgobX91v7B3Ze1/image-5.webp", "/images/peony-tall.jpg", "/manus-storage/async-images/tJa0DbWfOgobX91v7B3Ze1/image-4.webp", "/images/white-roses-tulips.png", "/manus-storage/async-images/tJa0DbWfOgobX91v7B3Ze1/image-2.webp", "/manus-storage/async-images/tJa0DbWfOgobX91v7B3Ze1/image-3.webp"].map((image, i) => <button className={`gallery-item gallery-${i + 1}`} key={image} onClick={() => setLightbox(image)} aria-label={`تكبير صورة زهور ${i + 1}`}><img src={image} alt={["ورود حمراء فاخرة", "فاوانيا وردية", "صندوق ورود", "ورود وتوليب", "توليب ناعم", "تنسيق زفاف"][i]} loading="lazy" /><span><Plus size={18} /></span></button>)}</div><div className="gallery-caption"><span>@PETALIA.FLOWERS</span><span>لحظاتكم، كما تروْنها</span></div></section>
+
+      <section className="testimonials section-pad"><SectionHead kicker="كلمات دافئة / 07" title="أثرٌ يبقى" english="A note from the heart" /><div className="reviews"><article><span className="quote-mark">“</span><p>وصلت الباقة أجمل مما تخيلت... كل تفصيلة فيها كانت تشبه المناسبة.</p><small>مراجعة تجريبية — مثال توضيحي</small></article><article><span className="quote-mark">“</span><p>ألوان هادئة وتنسيق بذوق رفيع. كانت هدية مثالية لشخص عزيز.</p><small>مراجعة تجريبية — مثال توضيحي</small></article><article><span className="quote-mark">“</span><p>فكرة تخصيص الباقة جعلت الهدية شخصية ومختلفة جدًا.</p><small>مراجعة تجريبية — مثال توضيحي</small></article></div><div className="review-disclaimer">النصوص أعلاه تجريبية وليست تقييمات حقيقية من عملاء.</div></section>
+
+      <section id="contact" className="contact-band"><div><span className="eyebrow">لديكم حكاية؟</span><h2>دعوا الورد يقول<br /><em>ما تعجز عنه الكلمات.</em></h2><p>نحن هنا لنختار معكم باقة تليق بكل ما تريدون قوله.</p><a className="button button-ivory" href={waLink("مرحبًا بيتـاليا، أود الاستفسار عن تنسيق باقة لمناسبة خاصة.")} target="_blank" rel="noreferrer">ابدأوا حكايتكم معنا <ArrowUpLeft size={16} /></a></div><div className="contact-flower"><Flower2 size={205} strokeWidth={.45} /></div></section>
+    </main>
+    <footer className="footer"><div className="footer-main"><div className="footer-brand"><a className="wordmark footer-wordmark" href="#home"><span className="wordmark-flower"><Flower2 size={19} strokeWidth={1.3} /></span><span>PETALIA<small>بيتـاليا للزهور</small></span></a><p>كل زهرة تحكي حكاية</p><span className="footer-en">Flowers, thoughtfully told.</span></div><div className="footer-col"><h3>اكتشفوا</h3><a href="#home">الرئيسية</a><a href="#collections">باقات الورد</a><a href="#occasions">مناسباتكم</a><a href="#story">قصتنا</a></div><div className="footer-col"><h3>اختاروا حسب الشعور</h3><a href="#products">الورود الحمراء</a><a href="#products">تنسيقات التوليب</a><a href="#products">بوكسات الورد</a><a href="#custom">صمموا باقتكم</a></div><div className="footer-col footer-contact"><h3>يسعدنا تواصلكم</h3><span>الرياض، المملكة العربية السعودية</span><span>رقم التواصل: placeholder قابل للتعديل</span><a className="footer-wa" href={waLink("مرحبًا بيتـاليا، أود التواصل معكم.")} target="_blank" rel="noreferrer">تواصلوا عبر واتساب <ArrowUpLeft size={15} /></a><div className="socials"><a href="#contact" aria-label="انستغرام تجريبي">Instagram ↗</a><a href="#contact" aria-label="بنترست تجريبي">Pinterest ↗</a></div></div></div><div className="footer-bottom"><span>© PETALIA — بيتـاليا للزهور</span><span>صُنع بعناية، ليُهدى بحب</span><a href="#home">العودة إلى الأعلى <ArrowUpLeft size={13} /></a></div></footer>
+    <a className="whatsapp-float" href={waLink("مرحبًا بيتـاليا، أود الاستفسار عن باقات الورد.")} target="_blank" rel="noreferrer" aria-label="تواصل عبر واتساب"><span className="wa-icon">◉</span><span>نحن هنا</span></a>
+
+    <AnimatePresence>{product && <motion.div className="modal-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setProduct(null)}><motion.div className="product-modal" role="dialog" aria-modal="true" aria-label={`تفاصيل ${product.name}`} initial={{ opacity: 0, y: 24, scale: .98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 12 }} onClick={e => e.stopPropagation()}><button className="modal-close" onClick={() => setProduct(null)} aria-label="إغلاق"><X /></button><div className="modal-photo"><img src={product.image} alt={product.name} /></div><div className="modal-copy"><span className="eyebrow">{product.en}</span><h2>{product.name}</h2><p>{product.description}</p><span className="modal-price">{product.price} <small>ر.س — سعر توضيحي</small></span><div className="modal-detail"><Check size={16} /> تنسيق يدوي بتفاصيل قابلة للتخصيص</div><a className="button button-dark" href={waLink(`مرحبًا بيتـاليا، أود الاستفسار عن ${product.name} — السعر الظاهر ${product.price} ر.س توضيحي.`)} target="_blank" rel="noreferrer">اطلبوا عبر واتساب <ArrowUpLeft size={16} /></a><small className="demo-price">السعر المعروض تجريبي للتوضيح فقط.</small></div></motion.div></motion.div>}</AnimatePresence>
+    <ImageModal image={lightbox} onClose={() => setLightbox(null)} />
+  </div>;
 }
